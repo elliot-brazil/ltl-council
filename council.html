@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LTL AI Council</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <style>
+    body { padding: 2rem 0; background-color: #f8f9fa; }
+    .container { max-width: 800px; }
+    .loader { margin: 2rem auto; text-align: center; }
+    .hidden { display: none; }
+    .committee-card { margin-bottom: 1rem; border: 1px solid #ddd; padding: 1rem; border-radius: 8px; background: white;}
+    .badge { padding: 0.2rem 0.5rem; font-size: 0.8rem; border-radius: 4px; background: #eee; color: #333; }
+    .badge.active { background: #d1e7dd; color: #0f5132; }
+    .auth-box { max-width: 400px; margin: 0 auto; }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <div id="loader" class="loader"><span aria-busy="true">Authenticating...</span></div>
+    
+    <article id="state-login" class="hidden auth-box">
+      <header><h2>Portal Access</h2></header>
+      <form id="email-form" onsubmit="handleRequestOTP(event)">
+        <label for="loginEmail">Work Email</label>
+        <input type="email" id="loginEmail" required placeholder="name@company.com">
+        <button type="submit" id="btn-email">Send Access Code</button>
+      </form>
+      <form id="otp-form" class="hidden" onsubmit="handleVerifyOTP(event)">
+        <p><small>An access code has been sent to your email.</small></p>
+        <label for="loginOtp">6-Digit Code</label>
+        <input type="text" id="loginOtp" required pattern="\d{6}">
+        <button type="submit" id="btn-otp">Verify & Enter</button>
+      </form>
+    </article>
+
+    <article id="state-pledge" class="hidden">
+      <header><h2>LTL AI Council Induction</h2></header>
+      <p>Welcome, <strong id="pledge-email"></strong>. To participate, you must execute the industry pledge.</p>
+      <form onsubmit="handlePledgeSubmit(event)">
+        <label for="fullName">Legal Name</label>
+        <input type="text" id="fullName" required>
+        <button type="submit" id="sign-btn">Sign & Execute</button>
+      </form>
+    </article>
+
+    <article id="state-waiting" class="hidden">
+      <header><h2>Verification in Progress</h2></header>
+      <p>Your pledge is under review by the Advisory Board.</p>
+      <button class="secondary outline" onclick="logout()">Sign Out</button>
+    </article>
+
+    <div id="state-dashboard" class="hidden">
+      <nav>
+        <ul><li><strong>LTL AI Council Portal</strong></li></ul>
+        <ul>
+          <li id="welcome-msg"></li>
+          <li><button class="secondary outline" onclick="logout()">Log Out</button></li>
+        </ul>
+      </nav>
+      <section>
+        <h3>Active Committees</h3>
+        <div id="committee-list"><span aria-busy="true">Loading securely...</span></div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE
+    const API_URL = 'https://script.google.com/macros/s/AKfycby2r_8Xvs5uogsTE8KkupQE536Y-QT2-ViiIJ3aPB_x1HxzvKAoE8VC2wPFtM-8mjg2/exec';
+    const TOKEN_KEY = 'ltl_session_token';
+    let userEmailCache = '';
+
+    document.addEventListener('DOMContentLoaded', initApp);
+
+    async function apiCall(action, data = {}) {
+      const payload = { action, ...data };
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+        return await response.json();
+      } catch (e) {
+        return { state: 'error', message: 'API connection failed.' };
+      }
+    }
+
+    async function initApp() {
+      const token = localStorage.getItem(TOKEN_KEY);
+      if (!token) {
+        renderState({ state: 'unauthenticated' });
+        return;
+      }
+      const response = await apiCall('getUserState', { token });
+      renderState(response);
+    }
+
+    function renderState(response) {
+      hideAll();
+      if (response.state === 'error') {
+        alert(response.message);
+        logout();
+        return;
+      }
+      if (response.state === 'unauthenticated') document.getElementById('state-login').classList.remove('hidden');
+      else if (response.state === 'pledge') {
+        document.getElementById('pledge-email').textContent = response.email;
+        document.getElementById('state-pledge').classList.remove('hidden');
+      } 
+      else if (response.state === 'waiting') document.getElementById('state-waiting').classList.remove('hidden');
+      else if (response.state === 'dashboard') {
+        document.getElementById('state-dashboard').classList.remove('hidden');
+        document.getElementById('welcome-msg').textContent = `Welcome, ${response.name}`;
+        loadCommittees();
+      }
+    }
+
+    async function handleRequestOTP(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-email');
+      userEmailCache = document.getElementById('loginEmail').value;
+      btn.setAttribute('aria-busy', 'true'); btn.disabled = true;
+
+      const res = await apiCall('requestOTP', { email: userEmailCache });
+      btn.removeAttribute('aria-busy'); btn.disabled = false;
+      
+      if (res.success) {
+        document.getElementById('email-form').classList.add('hidden');
+        document.getElementById('otp-form').classList.remove('hidden');
+      } else alert(res.message);
+    }
+
+    async function handleVerifyOTP(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-otp');
+      const otp = document.getElementById('loginOtp').value;
+      btn.setAttribute('aria-busy', 'true'); btn.disabled = true;
+
+      const res = await apiCall('verifyOTP', { email: userEmailCache, otp });
+      btn.removeAttribute('aria-busy'); btn.disabled = false;
+      
+      if (res.success) {
+        localStorage.setItem(TOKEN_KEY, res.token);
+        initApp();
+      } else alert(res.message);
+    }
+
+    function logout() { localStorage.removeItem(TOKEN_KEY); location.reload(); }
+
+    async function handlePledgeSubmit(e) {
+      e.preventDefault();
+      const btn = document.getElementById('sign-btn');
+      btn.setAttribute('aria-busy', 'true'); btn.disabled = true;
+      
+      const fullName = document.getElementById('fullName').value;
+      const token = localStorage.getItem(TOKEN_KEY);
+      
+      const newState = await apiCall('signPledge', { token, fullName });
+      btn.removeAttribute('aria-busy'); btn.disabled = false;
+      renderState(newState);
+    }
+
+    async function loadCommittees() {
+      const token = localStorage.getItem(TOKEN_KEY);
+      const data = await apiCall('getSecureDashboardData', { token });
+      
+      if (data.error) { alert(data.error); return; }
+      const container = document.getElementById('committee-list');
+      container.innerHTML = '';
+      
+      if (!data.committees || data.committees.length === 0) {
+        container.innerHTML = '<p>No committees found.</p>';
+        return;
+      }
+
+      data.committees.forEach(comm => {
+        const statusClass = (comm.Status || '').toLowerCase() === 'active' ? 'active' : '';
+        const card = document.createElement('div');
+        card.className = 'committee-card';
+        card.innerHTML = `<h4>${comm.Title} <span class="badge ${statusClass}">${comm.Status}</span></h4><p><strong>Chair:</strong> ${comm.Chair}</p>`;
+        container.appendChild(card);
+      });
+    }
+
+    function hideAll() {
+      ['loader', 'state-login', 'state-pledge', 'state-waiting', 'state-dashboard'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+      });
+    }
+  </script>
+</body>
+</html>
