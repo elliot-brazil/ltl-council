@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Council Admin | Intake</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --brand-primary: #111827;
+      --rh-gray: #f4f7f9;
+      --rh-text: #2c3e50;
+      --rh-border: #dfe3e8;
+      --rh-muted: #999;
+      --rh-muted-dark: #888;
+      --radius-md: 6px;
+      --font-xs: 0.6rem;
+      --font-body: 0.8rem;
+    }
+
+    * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+    body { margin: 0; background: var(--rh-gray); color: var(--rh-text); display: flex; flex-direction: column; height: 100vh; }
+
+    header {
+      background: #fff; padding: 15px 30px; border-bottom: 1px solid var(--rh-border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    
+    .logo-text { font-weight: 700; font-size: 1.2rem; color: var(--brand-primary); }
+    
+    .btn-primary { background: var(--brand-primary); color: white; border: none; padding: 8px 16px; border-radius: var(--radius-md); font-weight: 700; cursor: pointer; font-size: var(--font-body); }
+    .btn-ghost { background: transparent; color: var(--rh-muted-dark); border: 1px solid #ddd; padding: 8px 16px; border-radius: var(--radius-md); cursor: pointer; font-weight: 600; font-size: var(--font-body); }
+    .btn-ghost:hover { color: var(--brand-primary); border-color: var(--brand-primary); }
+
+    main { padding: 40px; flex: 1; overflow-y: auto; max-width: 1000px; margin: 0 auto; width: 100%; }
+    
+    .request-card {
+      background: white; padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--rh-border);
+      margin-bottom: 15px; display: flex; justify-content: space-between; align-items: flex-start;
+    }
+    
+    .req-header { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+    .req-title { font-weight: 700; font-size: 1.1rem; margin: 0; }
+    .req-meta { color: var(--rh-muted-dark); font-size: var(--font-body); }
+    
+    .status-pill {
+      font-size: var(--font-xs); font-weight: 700; border: 1px solid #e2e8f0; padding: 2px 10px;
+      border-radius: 20px; text-transform: uppercase;
+    }
+    .status-pending { background: #fefce8; color: #854d0e; border-color: #fef08a; }
+    .tag-pill { background: #e0e7ff; color: #3730a3; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; }
+
+    .actions { display: flex; gap: 10px; flex-direction: column; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-text">LTL AI Council | Admin Dashboard</div>
+    <div style="display: flex; gap: 10px;">
+      <button class="btn-ghost" onclick="loadInbox()">Refresh Inbox</button>
+      <button class="btn-ghost" onclick="signOut()">Sign Out</button>
+    </div>
+  </header>
+
+  <main>
+    <h2>Pending Stakeholder Requests</h2>
+    <div id="inbox-container">Loading requests...</div>
+  </main>
+
+  <script>
+    // PASTE YOUR NEW SUPABASE COUNCIL CREDENTIALS HERE
+    const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    async function checkAdmin() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return window.location.replace('/login.html'); // Redirect if not logged in
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+
+      if (!profile || profile.role !== 'admin') {
+        document.body.innerHTML = '<h2 style="padding:40px; text-align:center;">Unauthorized Access. Admins only.</h2>';
+        return;
+      }
+      loadInbox();
+    }
+
+    async function loadInbox() {
+      const container = document.getElementById('inbox-container');
+      
+      // Fetch pending requests joined with profile data
+      const { data, error } = await supabase
+        .from('committee_requests')
+        .select(`
+          *,
+          profiles ( full_name, email, pledge_version ),
+          committees ( title )
+        `)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) { container.innerHTML = `<p>Error loading requests: ${error.message}</p>`; return; }
+      
+      if (!data || data.length === 0) {
+        container.innerHTML = '<p style="color: var(--rh-muted-dark); text-align: center; margin-top: 50px;">No pending requests in the queue.</p>';
+        return;
+      }
+
+      container.innerHTML = data.map(req => {
+        const date = new Date(req.created_at).toLocaleDateString();
+        const committeeName = req.committees?.title || 'New Committee Proposal';
+        const safeReqId = `'${req.id}'`;
+        const safeProfileId = `'${req.profile_id}'`;
+
+        return `
+        <div class="request-card">
+          <div style="flex: 1; padding-right: 20px;">
+            <div class="req-header">
+              <h3 class="req-title">${req.profiles.full_name}</h3>
+              <span class="status-pill status-pending">Pending Review</span>
+              <span class="tag-pill">${req.request_type === 'lead_new' ? 'Wants to Lead' : 'Wants to Join'}</span>
+            </div>
+            <div class="req-meta">
+              <strong>Email:</strong> ${req.profiles.email} &bull; 
+              <strong>Target Committee:</strong> ${committeeName} &bull; 
+              <strong>Submitted:</strong> ${date}
+            </div>
+            <p style="margin-top: 15px; line-height: 1.5;"><strong>Message:</strong><br>${req.message || '<em>No message provided.</em>'}</p>
+            <p class="req-meta" style="font-size: 0.7rem;">Pledge Executed: ${req.profiles.pledge_version || 'None'}</p>
+          </div>
+          <div class="actions">
+            <button class="btn-primary" onclick="approveRequest(${safeReqId}, ${safeProfileId})">Approve Member</button>
+            <button class="btn-ghost" onclick="rejectRequest(${safeReqId})" style="border-color: #fecaca; color: #991b1b;">Reject</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    async function approveRequest(requestId, profileId) {
+      if (!confirm("Approve this user and grant them Stakeholder access?")) return;
+      
+      // 1. Update the request status
+      await supabase.from('committee_requests').update({ status: 'approved' }).eq('id', requestId);
+      
+      // 2. Upgrade the user's profile role from 'pending' to 'stakeholder'
+      await supabase.from('profiles').update({ role: 'stakeholder', status: 'approved' }).eq('id', profileId);
+      
+      // 3. (Optional) Insert them into committee_members if they requested to join an existing one
+      
+      alert("Approved!");
+      loadInbox();
+    }
+
+    async function rejectRequest(requestId) {
+      const reason = prompt("Enter reason for rejection (this will be logged):");
+      if (reason === null) return;
+
+      await supabase.from('committee_requests').update({ 
+        status: 'rejected',
+        reason_code: reason 
+      }).eq('id', requestId);
+      
+      loadInbox();
+    }
+
+    async function signOut() {
+      await supabase.auth.signOut();
+      window.location.reload();
+    }
+
+    checkAdmin();
+  </script>
+</body>
+</html>
