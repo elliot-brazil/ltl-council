@@ -73,13 +73,13 @@
     // PASTE YOUR NEW SUPABASE COUNCIL CREDENTIALS HERE
     const SUPABASE_URL = 'https://wkedqgkucbrbsxbnrlgj.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_rJwyfnfLrrxlP0L3ftuubQ_5_Gf2jxh';
-    const supabase = supabaseClient.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     async function checkAdmin() {
       const { data: { session } } = await supabaseClient.auth.getSession();
-      if (!session) return window.location.replace('/login.html'); // Redirect if not logged in
+      if (!session) return window.location.replace('/index.html'); // Redirect if not logged in
 
-      const { data: profile } = await supabase
+      const { data: profile } = await supabaseClient
         .from('profiles')
         .select('role')
         .eq('id', session.user.id)
@@ -96,7 +96,7 @@
       const container = document.getElementById('inbox-container');
       
       // Fetch pending requests joined with profile data
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('committee_requests')
         .select(`
           *,
@@ -151,8 +151,6 @@
       
       // 2. Upgrade the user's profile role from 'pending' to 'stakeholder'
       await supabaseClient.from('profiles').update({ role: 'stakeholder', status: 'approved' }).eq('id', profileId);
-      
-      // 3. (Optional) Insert them into committee_members if they requested to join an existing one
       
       alert("Approved!");
       loadInbox();
