@@ -242,33 +242,57 @@
 
     async function checkSession() {
       showLoader();
-      const { data: { session } } = await supabaseClient.auth.getSession();
-      
-      if (!session) { renderState('login'); return; }
-      currentUser = session.user;
-      
-      let { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
-      
-      if (!profile) {
-        const { data: newProfile } = await supabaseClient.from('profiles').insert([
-          { id: currentUser.id, email: currentUser.email, status: 'pending' }
-        ]).select().single();
-        profile = newProfile;
-      }
-      currentProfile = profile;
+      try {
+        const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+        if (sessionError) throw sessionError;
+        
+        if (!session) { renderState('login'); return; }
+        currentUser = session.user;
+        
+        // Fetch Profile
+        let { data: profile, error: fetchError } = await supabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
+        
+        // PGRST116 means "No rows returned", which is expected for brand new users. Any other error is a genuine failure.
+        if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
+        
+        if (!profile) {
+          // Attempt to create the profile
+          const { data: newProfile, error: insertError } = await supabaseClient.from('profiles').insert([
+            { id: currentUser.id, email: currentUser.email, status: 'pending' }
+          ]).select().single();
+          
+          if (insertError) throw insertError;
+          profile = newProfile;
+        }
 
-      if (!profile.pledge_version) {
-        document.getElementById('pledge-email').textContent = profile.email;
-        renderState('pledge');
-      } else if (profile.status === 'pending') {
-        const { data: reqs } = await supabaseClient.from('committee_requests').select('id').eq('profile_id', profile.id);
-        if (reqs && reqs.length > 0) renderState('waiting');
-        else { loadCommitteesForIntake(); renderState('intake'); }
-      } else if (profile.status === 'approved') {
-        document.getElementById('welcome-msg').textContent = `USR:${profile.full_name.toUpperCase()}`;
-        loadDashboard(); renderState('dashboard');
-      } else {
-        alert("ACCESS DENIED: Account suspended."); signOut();
+        currentProfile = profile;
+        if (!profile) throw new Error("Profile creation failed silently.");
+
+        // Routing Logic
+        if (!profile.pledge_version) {
+          document.getElementById('pledge-email').textContent = profile.email;
+          renderState('pledge');
+        } else if (profile.status === 'pending') {
+          const { data: reqs, error: reqsError } = await supabaseClient.from('committee_requests').select('id').eq('profile_id', profile.id);
+          if (reqsError) throw reqsError;
+
+          if (reqs && reqs.length > 0) renderState('waiting');
+          else { loadCommitteesForIntake(); renderState('intake'); }
+        } else if (profile.status === 'approved') {
+          document.getElementById('welcome-msg').textContent = `USR:${profile.full_name.toUpperCase()}`;
+          loadDashboard(); renderState('dashboard');
+        } else {
+          throw new Error("ACCESS DENIED: Account suspended or rejected.");
+        }
+      } catch (err) {
+        console.error("Session Error:", err);
+        
+        // AUTO-HEAL: Wipe the corrupted session programmatically
+        await supabaseClient.auth.signOut();
+        
+        // Alert the actual error text for debugging, then reset the UI
+        alert(`Authentication sequence failed. The session has been cleared.\n\nSystem Log: ${err.message}`);
+        renderState('login');
       }
     }
 
