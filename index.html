@@ -252,13 +252,11 @@
         // Fetch Profile
         let { data: profile, error: fetchError } = await supabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
         
-        // PGRST116 means "No rows returned", which is expected for brand new users. Any other error is a genuine failure.
         if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
         
         if (!profile) {
-          // Attempt to create the profile
           const { data: newProfile, error: insertError } = await supabaseClient.from('profiles').insert([
-            { id: currentUser.id, email: currentUser.email, status: 'pending' }
+            { id: currentUser.id, email: currentUser.email, status: 'pending', role: 'pending' }
           ]).select().single();
           
           if (insertError) throw insertError;
@@ -286,13 +284,14 @@
         }
       } catch (err) {
         console.error("Session Error:", err);
-        
-        // AUTO-HEAL: Wipe the corrupted session programmatically
-        await supabaseClient.auth.signOut();
-        
-        // Alert the actual error text for debugging, then reset the UI
-        alert(`Authentication sequence failed. The session has been cleared.\n\nSystem Log: ${err.message}`);
-        renderState('login');
+        // Print the error directly to the UI instead of using the blocked alert()
+        document.getElementById('loader').innerHTML = `
+          <div style="color: var(--accent-red); padding: 20px; border: 1px solid var(--accent-red); border-radius: 8px; background: rgba(255,0,0,0.1); margin-bottom: 20px; text-align: left;">
+            <strong style="font-family: 'Space Grotesk', sans-serif;">SYSTEM ERROR DETECTED:</strong><br><br>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;">${err.message || JSON.stringify(err)}</span>
+          </div>
+          <button class="secondary" onclick="supabaseClient.auth.signOut().then(() => window.location.reload())" style="width: auto;">Clear Session & Restart</button>
+        `;
       }
     }
 
