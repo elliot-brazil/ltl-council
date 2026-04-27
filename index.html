@@ -14,6 +14,7 @@
       --bg-surface: rgba(20, 20, 25, 0.6);
       --accent-cyan: #00f0ff;
       --accent-purple: #7000ff;
+      --accent-red: #ff003c;
       --text-primary: #e2e8f0;
       --text-muted: #94a3b8;
       --border-glass: rgba(255, 255, 255, 0.1);
@@ -65,6 +66,11 @@
     input:focus, select:focus, textarea:focus { border-color: var(--accent-cyan); box-shadow: 0 0 8px rgba(0, 240, 255, 0.2); }
     select option { background: var(--bg-base); color: var(--text-primary); }
 
+    /* Checkboxes */
+    .checkbox-group { display: flex; flex-direction: column; gap: 12px; margin-bottom: 2rem; background: rgba(0,0,0,0.3); padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-glass); }
+    .checkbox-label { display: flex; align-items: center; gap: 10px; font-family: 'Inter', sans-serif; color: var(--text-primary); font-size: 0.9rem; text-transform: none; cursor: pointer; margin: 0; }
+    .checkbox-label input[type="checkbox"] { width: auto; margin: 0; accent-color: var(--accent-cyan); cursor: pointer; width: 16px; height: 16px; }
+
     /* Buttons */
     button {
       width: 100%;
@@ -106,6 +112,7 @@
       font-size: 0.85rem; text-align: left; line-height: 1.6; color: var(--text-muted);
     }
     .legal-box strong { color: #fff; }
+    .legal-box p { margin-top: 0; margin-bottom: 1rem; }
     .committee-card { 
       border: 1px solid var(--border-glass); padding: 1.5rem; 
       border-radius: var(--radius-md); background: rgba(0,0,0,0.3); 
@@ -149,7 +156,15 @@
 
       <div id="legal-container" class="hidden">
         <div class="legal-box" id="legal-text"></div>
+        
         <form onsubmit="handlePledgeSubmit(event)">
+          
+          <label>Committees of Interest (Optional)</label>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: -5px; margin-bottom: 10px;">Select the nodes you wish to join. Leaving this blank will allow you to propose a new node on the next screen.</p>
+          <div id="pledge-committees-list" class="checkbox-group">
+            <span style="color:var(--text-muted); font-size: 0.85rem; font-family:'JetBrains Mono', monospace;">[ FETCHING ACTIVE NODES... ]</span>
+          </div>
+
           <label for="fullName">Cryptographic Signature (Legal Name)</label>
           <input type="text" id="fullName" required placeholder="Type your full legal name to execute">
           <button type="submit" id="sign-btn">Sign & Execute Contract</button>
@@ -159,28 +174,12 @@
 
     <article id="state-intake" class="hidden glass-panel">
       <h2>Network Intake Routing</h2>
-      <p style="color: var(--text-muted); margin-bottom: 2rem;">Pledge executed. Define your network participation parameters.</p>
+      <p style="color: var(--text-muted); margin-bottom: 2rem;">Pledge executed. Define your network participation parameters to deploy a new node.</p>
       
       <form onsubmit="handleIntakeSubmit(event)">
-        <label for="request-type">Participation Intent</label>
-        <select id="request-type" onchange="toggleIntakeFields()" required>
-          <option value="" disabled selected>Select Intent Parameter...</option>
-          <option value="join_existing">Attach to Active Committee</option>
-          <option value="lead_new">Deploy New Committee Protocol</option>
-        </select>
-
-        <div id="join-fields" class="hidden" style="margin-top: 1.5rem;">
-          <label for="committee-select">Target Node (Committee)</label>
-          <select id="committee-select">
-            <option value="">Querying active nodes...</option>
-          </select>
-          <label>Payload (Optional Message for Chair)</label>
-          <textarea id="join-message" rows="3" placeholder="Briefly state qualifications."></textarea>
-        </div>
-
-        <div id="lead-fields" class="hidden" style="margin-top: 1.5rem;">
+        <div id="lead-fields" style="margin-top: 1.5rem;">
           <label for="focus-area">Sector Focus</label>
-          <select id="focus-area">
+          <select id="focus-area" required>
             <option value="" disabled selected>Select an area...</option>
             <option value="Education">Education</option>
             <option value="Operations">Operations</option>
@@ -191,12 +190,12 @@
             <option value="Legal">Legal</option>
           </select>
           <label>Proposed Designation (Title)</label>
-          <input type="text" id="new-committee-title" placeholder="e.g., Data Interchange Standards">
+          <input type="text" id="new-committee-title" required placeholder="e.g., Data Interchange Standards">
           <label>Abstract (Objective Parameters)</label>
-          <textarea id="lead-abstract" rows="5" placeholder="Define the challenge and success criteria."></textarea>
+          <textarea id="lead-abstract" rows="5" required placeholder="Define the challenge and success criteria."></textarea>
         </div>
 
-        <button type="submit" id="intake-btn" class="hidden" style="margin-top: 1rem;">Transmit Application</button>
+        <button type="submit" id="intake-btn" style="margin-top: 1rem;">Transmit Application</button>
       </form>
     </article>
 
@@ -231,13 +230,11 @@
 
     let currentUser = null;
     let currentProfile = null;
-    let hasFatalError = false; // UI Lock flag
+    let hasFatalError = false; 
 
     // --- 2. INITIALIZATION & STATE ROUTING ---
-    // Removed DOMContentLoaded listener to prevent race conditions. 
-    // onAuthStateChange automatically handles INITIAL_SESSION.
     supabaseClient.auth.onAuthStateChange((event, session) => {
-      if (hasFatalError) return; // Prevent background events from hiding the error screen
+      if (hasFatalError) return; 
       if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') checkSession();
       else if (event === 'SIGNED_OUT') renderState('login');
     });
@@ -252,16 +249,13 @@
         if (!session) { renderState('login'); return; }
         currentUser = session.user;
         
-        // Fetch Profile
         let { data: profile, error: fetchError } = await supabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
-        
         if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
         
         if (!profile) {
           const { data: newProfile, error: insertError } = await supabaseClient.from('profiles').insert([
             { id: currentUser.id, email: currentUser.email, status: 'pending', role: 'pending' }
           ]).select().single();
-          
           if (insertError) throw insertError;
           profile = newProfile;
         }
@@ -278,7 +272,7 @@
           if (reqsError) throw reqsError;
 
           if (reqs && reqs.length > 0) renderState('waiting');
-          else { loadCommitteesForIntake(); renderState('intake'); }
+          else renderState('intake'); 
         } else if (profile.status === 'approved') {
           document.getElementById('welcome-msg').textContent = `USR:${profile.full_name.toUpperCase()}`;
           loadDashboard(); renderState('dashboard');
@@ -286,10 +280,8 @@
           throw new Error("ACCESS DENIED: Account suspended or rejected.");
         }
       } catch (err) {
-        hasFatalError = true; // Lock the UI
+        hasFatalError = true;
         console.error("Session Error:", err);
-        
-        // Force the loader to remain visible and hide everything else
         ['state-login', 'state-pledge', 'state-intake', 'state-waiting', 'state-dashboard'].forEach(id => {
           document.getElementById(id).classList.add('hidden');
         });
@@ -330,16 +322,93 @@
     async function signOut() { await supabaseClient.auth.signOut(); }
 
     // --- 4. PLEDGE LOGIC ---
-    const advisorPledge = `<strong>ULTL - LTL AI Council Advisor Pledge</strong><br><br>... [Abbreviated for UI] ... The Advisor agrees to serve as a resource to ULTL member Stakeholders with the goal of sharing industry insights and best practices to help improve members' transportation, logistics, or supply chain performance - not to solicit business, sell products, or advance their own corporate objectives during Council engagements.`;
-    const stakeholderPledge = `<strong>ULTL - LTL AI Council General Stakeholder Pledge</strong><br><br>... [Abbreviated for UI] ... Good Faith Engagement - The intent of engagement is solely to seek or provide professional assistance, not to solicit, sell, or promote products or services in the course of the Council interaction. The Stakeholder will interact with Council Advisors in a professional, respectful, and collaborative manner.`;
+    const advisorPledge = `
+      <p>This Council Advisor Agreement & Pledge ("Agreement") is entered into by and between the Understand LTL ("ULTL"), a professional trade association, and the undersigned volunteer Council Advisory Board member ("Advisor"), effective as of the date last signed below.</p>
+      <p><strong>1. Eligibility and Role</strong><br>
+      1.1 The Advisor affirms that they are a ULTL member in good standing as of the Effective Date and will maintain that status throughout their service in the Council program.<br>
+      1.2 The Advisor's role is to voluntarily provide neutral, good-faith advisory assistance, leveraging their professional knowledge, experience, and references for the benefit of Council members.</p>
+      <p><strong>2. Purpose of Engagement</strong><br>
+      The Advisor agrees to serve as a resource to ULTL member Stakeholders ("Stakeholders") with the goal of sharing industry insights and best practices to help improve members' transportation, logistics, or supply chain performance - not to solicit business, sell products, or advance their own corporate objectives during Council engagements.</p>
+      <p><strong>3. Advisor Expectations</strong><br>
+      The Advisor understands and agrees to:<br>
+      3.1 Neutrality - Set aside personal or corporate business agendas and provide impartial guidance.<br>
+      3.2 No Sales Use - Refrain from using the Council interaction as a marketing tool or sales platform for the Advisor, their employer, or affiliates.<br>
+      3.3 Professional Courtesy - Respect the Stakeholders's time and objectives, provide timely communication, and participate constructively.<br>
+      3.4 Conflict of Interest - Disclose promptly to Board any actual, potential, or perceived conflict of interest, including when the Stakeholders is a direct competitor. The Advisor may recuse themselves from any given engagement, and the Board may reassign the Committee Lead to another Advisor.<br>
+      3.5 Voluntary Nature - Provide services without expectation of monetary compensation, gifts, or commissions from Stakeholders for services rendered as part of the program.</p>
+      <p><strong>4. Confidentiality</strong><br>
+      4.1 Definition - "Confidential Information" means any non-public, proprietary, or sensitive business or personal information disclosed during the Council engagement.<br>
+      4.2 Obligations - The Advisor agrees not to disclose, disseminate, or use Confidential Information for any purpose other than fulfilling their advisory role, except as required by law. Stakeholders also agree to not disclose, disseminate, or use any Confidential Information.<br>
+      4.3 Exclusions - Confidential Information does not include information that: (i) becomes public without breach of this Agreement; (ii) is lawfully obtained from a third party without restriction; or (iii) is independently developed without use of such information.<br>
+      4.4 Term - Confidentiality obligations apply from the Effective Date and for three (3) years following the conclusion of the specific Council engagement.<br>
+      4.5 Survival - This Section survives termination of this Agreement.</p>
+      <p><strong>5. Disclaimer and Liability</strong><br>
+      5.1 Advisory Nature - The Advisor's input is informational only and does not constitute professional legal, financial, or consulting advice; the Stakeholder is solely responsible for decisions made in reliance on such advice.<br>
+      5.2 ULTL Hold Harmless - The Advisor releases and holds harmless ULTL, its officers, directors, and staff from any claims, losses, or liabilities related to their voluntary service.<br>
+      5.3 Reciprocal Indemnification - ULTL agrees to hold harmless the Advisor from claims by Stakeholders arising solely from the Advisor's good-faith performance of voluntary duties.</p>
+      <p><strong>6. Term and Termination</strong><br>
+      This Agreement becomes effective on the date signed by the Advisor and remains in effect until: (a) the Advisor ceases participation in the Council program; or (b) terminated earlier by ULTL or the Advisor upon written notice. Sections 4 (Confidentiality) and 5 (Disclaimer and Liability) survive termination.</p>
+      <p><strong>7. Governing Law</strong><br>
+      This Agreement will be governed by and construed in accordance with the laws of the State of [STATE OF INCORPORATION], without regard to conflict-of-law rules.</p>
+      <p><strong>8. Entire Agreement</strong><br>
+      This document constitutes the full understanding between the Advisor and ULTL concerning Council service, superseding all prior oral or written understandings.</p>
+    `;
 
-    function togglePledgeText() {
+    const stakeholderPledge = `
+      <p>This Council Stakeholder Agreement & Pledge ("Agreement") is entered into by and between Understand LTL ("ULTL"), a not-for-profit professional trade association, and the undersigned Council Stakeholder ("Stakeholder"), effective as of the date indicated below.</p>
+      <p><strong>1. Eligibility</strong><br>
+      1.1 The Stakeholder affirms and attests that they are a ULTL member in good standing at the time of executing this Agreement and throughout the period of engagement with the Council program.<br>
+      1.2 Membership in good standing means the Stakeholder has not been suspended or expelled, and they abide by ULTL's Stakeholder pledge.</p>
+      <p><strong>2. Purpose of Engagement</strong><br>
+      The Stakeholder requests the voluntary participation in the ULTL LTL AI Council Advisors for the limited purpose of obtaining insights, experience, and references to assist in improving transportation or supply chain practices.</p>
+      <p><strong>3. Stakeholder Commitments (Pledge)</strong><br>
+      The Stakeholder hereby pledges that:<br>
+      3.1 Good Faith Engagement - The intent of engagement is solely to seek or provide professional assistance, not to solicit, sell, or promote products or services in the course of the Council interaction.<br>
+      3.2 No Commercial Restriction Outside Council - It is understood that no Council Advisor is prohibited from doing business directly with members outside of Council engagements; however, such business shall be conducted outside and independent of the Council program.<br>
+      3.3 Conflict of Interest Cooperation - If a Council Advisor identifies a material conflict of interest or direct competitive situation involving the Stakeholder, the Council Advisor may recuse themselves and, where feasible, ULTL may assign another qualified Advisor.<br>
+      3.4 No Monetary Compensation - The Stakeholder shall not offer, provide, or facilitate any form of direct monetary compensation, gifts, or commissions to Council Advisors for services rendered through the Council program.<br>
+      3.5 Professional Conduct - The Stakeholder will interact with Council Advisors in a professional, respectful, and collaborative manner.</p>
+      <p><strong>4. Confidentiality</strong><br>
+      4.1 Definition - "Confidential Information" means all non-public, proprietary, or sensitive business information disclosed during the Council engagement, whether oral, written, digital, or otherwise recorded.<br>
+      4.2 Obligation - The Stakeholder agrees to maintain in strict confidence all Confidential Information shared by Council Advisors or ULTL, and to use such information exclusively for the intended advisory purpose.<br>
+      4.3 Exclusions - Confidential Information does not include information that: (i) is or becomes publicly available without breach of this Agreement; (ii) is rightfully received from a third party without restriction; or (iii) must be disclosed pursuant to legal process, provided that prompt written notice is given to ULTL before disclosure.<br>
+      4.4 Term - Confidentiality obligations commence on the Effective Date and remain in force for three (3) years after the conclusion of the Council engagement.<br>
+      4.5 Survival - This Section 4 shall survive termination or expiration of this Agreement.</p>
+      <p><strong>5. Disclaimer of Liability</strong><br>
+      5.1 Advisory Nature - Council Advisors provide recommendations, guidance, and suggestions on a voluntary basis; such input should be considered informational only and not a substitute for the Stakeholder's own professional judgment or independent verification.<br>
+      5.2 No Warranty - ULTL and Council Advisors make no warranties, express or implied, regarding the accuracy, completeness, or applicability of advice provided.<br>
+      5.3 Limitation of Liability - To the fullest extent permitted by law, ULTL, its officers, directors, employees, volunteers, and Council Advisors shall not be liable for any claims, damages, losses, costs, or expenses arising from or related to the Stakeholder's reliance on Council interactions.<br>
+      5.4 Indemnification - The Stakeholder agrees to indemnify and hold harmless ULTL and Council Advisors from claims resulting from actions taken or not taken-based on Council advice.</p>
+      <p><strong>6. Term and Termination</strong><br>
+      This Agreement is effective on the date signed by the Stakeholder and shall remain in effect until the conclusion of the Council engagement, unless terminated earlier by ULTL. Sections 4 (Confidentiality) and 5 (Disclaimer of Liability) survive termination.</p>
+      <p><strong>7. Governing Law</strong><br>
+      This Agreement is governed by and construed in accordance with the laws of the State of [State of Incorporation], without regard to conflict of law provisions.</p>
+      <p><strong>8. Entire Agreement</strong><br>
+      This Agreement constitutes the entire understanding between the Stakeholder and ULTL concerning Council engagement and supersedes all prior oral or written understandings.</p>
+    `;
+
+    async function togglePledgeText() {
       const role = document.getElementById('role-select').value;
       const container = document.getElementById('legal-container');
       const textDiv = document.getElementById('legal-text');
+      const commContainer = document.getElementById('pledge-committees-list');
       
       if (!role) { container.classList.add('hidden'); return; }
       textDiv.innerHTML = role === 'advisor' ? advisorPledge : stakeholderPledge;
+      
+      // Load active committees into checkboxes
+      const { data } = await supabaseClient.from('committees').select('id, title').eq('status', 'Active');
+      if (data && data.length > 0) {
+        commContainer.innerHTML = data.map(c => `
+          <label class="checkbox-label">
+            <input type="checkbox" value="${c.id}" class="committee-checkbox">
+            ${c.title}
+          </label>
+        `).join('');
+      } else {
+        commContainer.innerHTML = '<span style="color:var(--text-muted); font-size: 0.85rem;">[ NO ACTIVE NODES FOUND ]</span>';
+      }
+
       container.classList.remove('hidden');
     }
 
@@ -349,47 +418,51 @@
       const fullName = document.getElementById('fullName').value;
       const role = document.getElementById('role-select').value;
       
+      const selectedCommittees = Array.from(document.querySelectorAll('.committee-checkbox:checked')).map(cb => cb.value);
+
       btn.innerText = "EXECUTING..."; btn.disabled = true;
-      const { error } = await supabaseClient.from('profiles').update({
+      
+      const { error: profileError } = await supabaseClient.from('profiles').update({
         full_name: fullName, role: role, pledge_version: role === 'advisor' ? 'advisor_v1' : 'stakeholder_v1'
       }).eq('id', currentUser.id);
       
+      if (profileError) {
+        alert("Execution failed: " + profileError.message);
+        btn.innerText = "Sign & Execute Contract"; btn.disabled = false;
+        return;
+      }
+
+      if (selectedCommittees.length > 0) {
+        const requests = selectedCommittees.map(cid => ({
+          profile_id: currentUser.id,
+          committee_id: cid,
+          request_type: 'join_existing',
+          status: 'pending'
+        }));
+        
+        const { error: reqError } = await supabaseClient.from('committee_requests').insert(requests);
+        if (reqError) {
+          console.error("Committee Request Error:", reqError);
+          alert("Pledge executed, but node attachment failed. Contact sys.admin.");
+        }
+      }
+      
       btn.innerText = "Sign & Execute Contract"; btn.disabled = false;
-      if (error) alert("Execution failed: " + error.message);
-      else checkSession(); 
+      checkSession(); 
     }
 
-    // --- 5. INTAKE REQUEST LOGIC ---
-    async function loadCommitteesForIntake() {
-      const { data } = await supabaseClient.from('committees').select('id, title').eq('status', 'Active');
-      const select = document.getElementById('committee-select');
-      if (data && data.length > 0) {
-        select.innerHTML = '<option value="" disabled selected>Select a Node...</option>' + data.map(c => `<option value="${c.id}">${c.title}</option>`).join('');
-      } else select.innerHTML = '<option value="">No active nodes available.</option>';
-    }
-
-    function toggleIntakeFields() {
-      const type = document.getElementById('request-type').value;
-      document.getElementById('join-fields').classList.add('hidden');
-      document.getElementById('lead-fields').classList.add('hidden');
-      document.getElementById('intake-btn').classList.remove('hidden');
-      if (type === 'join_existing') document.getElementById('join-fields').classList.remove('hidden');
-      if (type === 'lead_new') document.getElementById('lead-fields').classList.remove('hidden');
-    }
-
+    // --- 5. INTAKE REQUEST LOGIC (For New Proposals Only) ---
     async function handleIntakeSubmit(e) {
       e.preventDefault();
-      const type = document.getElementById('request-type').value;
       const btn = document.getElementById('intake-btn');
       btn.innerText = "TRANSMITTING..."; btn.disabled = true;
 
-      let payload = { profile_id: currentUser.id, request_type: type, status: 'pending' };
-      if (type === 'join_existing') {
-        payload.committee_id = document.getElementById('committee-select').value;
-        payload.message = document.getElementById('join-message').value;
-      } else {
-        payload.message = `PROPOSED TITLE: ${document.getElementById('new-committee-title').value}\nFOCUS AREA: ${document.getElementById('focus-area').value}\n\nABSTRACT:\n${document.getElementById('lead-abstract').value}`;
-      }
+      const payload = { 
+        profile_id: currentUser.id, 
+        request_type: 'lead_new', 
+        status: 'pending',
+        message: `PROPOSED TITLE: ${document.getElementById('new-committee-title').value}\nFOCUS AREA: ${document.getElementById('focus-area').value}\n\nABSTRACT:\n${document.getElementById('lead-abstract').value}`
+      };
 
       const { error } = await supabaseClient.from('committee_requests').insert([payload]);
       btn.innerText = "Transmit Application"; btn.disabled = false;
