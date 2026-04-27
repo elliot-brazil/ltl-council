@@ -231,16 +231,19 @@
 
     let currentUser = null;
     let currentProfile = null;
+    let hasFatalError = false; // UI Lock flag
 
     // --- 2. INITIALIZATION & STATE ROUTING ---
-    document.addEventListener('DOMContentLoaded', checkSession);
-
+    // Removed DOMContentLoaded listener to prevent race conditions. 
+    // onAuthStateChange automatically handles INITIAL_SESSION.
     supabaseClient.auth.onAuthStateChange((event, session) => {
+      if (hasFatalError) return; // Prevent background events from hiding the error screen
       if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') checkSession();
       else if (event === 'SIGNED_OUT') renderState('login');
     });
 
     async function checkSession() {
+      if (hasFatalError) return;
       showLoader();
       try {
         const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
@@ -283,9 +286,17 @@
           throw new Error("ACCESS DENIED: Account suspended or rejected.");
         }
       } catch (err) {
+        hasFatalError = true; // Lock the UI
         console.error("Session Error:", err);
-        // Print the error directly to the UI instead of using the blocked alert()
-        document.getElementById('loader').innerHTML = `
+        
+        // Force the loader to remain visible and hide everything else
+        ['state-login', 'state-pledge', 'state-intake', 'state-waiting', 'state-dashboard'].forEach(id => {
+          document.getElementById(id).classList.add('hidden');
+        });
+        
+        const loader = document.getElementById('loader');
+        loader.classList.remove('hidden');
+        loader.innerHTML = `
           <div style="color: var(--accent-red); padding: 20px; border: 1px solid var(--accent-red); border-radius: 8px; background: rgba(255,0,0,0.1); margin-bottom: 20px; text-align: left;">
             <strong style="font-family: 'Space Grotesk', sans-serif;">SYSTEM ERROR DETECTED:</strong><br><br>
             <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;">${err.message || JSON.stringify(err)}</span>
