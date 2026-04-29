@@ -213,13 +213,49 @@
           <button class="secondary" style="padding: 6px 12px; font-size: 0.8rem; width: auto;" onclick="signOut()">DISCONNECT</button>
         </div>
       </div>
-      
-      <section>
+
+    <section>
         <h3 style="color: #fff; margin-bottom: 0.5rem;">Active Nodes [Committees]</h3>
         <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 2rem;">Entities currently processing LTL AI applications.</p>
         <div id="committee-list"><div class="loader">[ FETCHING.DATA... ]</div></div>
       </section>
+    </div> 
+    <div id="state-node" class="hidden">
+      <div class="nav-bar">
+        <div class="nav-brand">LTL AI COUNCIL | <span style="color: var(--accent-cyan);">NODE_WORKSPACE</span></div>
+        <button class="secondary" style="padding: 6px 12px; font-size: 0.8rem; width: auto;" onclick="renderState('dashboard')">RETURN TO NETWORK</button>
+      </div>
+
+      <div class="glass-panel" style="margin-bottom: 2rem;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 1rem;">
+          <div>
+            <h2 id="node-title" style="margin-bottom: 0.5rem; color: #fff;">[NODE_TITLE]</h2>
+            <span id="node-focus" class="badge purple">FOCUS_AREA</span>
+          </div>
+          <span class="badge active">SYS.ACTIVE</span>
+        </div>
+        <p id="node-abstract" style="color: var(--text-primary); line-height: 1.6;"></p>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+        
+        <section>
+          <h3 style="color: var(--text-muted); font-size: 1rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem; margin-bottom: 1rem;">// ACTIVE ROSTER</h3>
+          <div id="node-roster">
+            <div class="loader" style="margin: 2rem 0; font-size: 0.8rem;">[ QUERYING.ROSTER... ]</div>
+          </div>
+        </section>
+
+        <section>
+          <h3 style="color: var(--text-muted); font-size: 1rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem; margin-bottom: 1rem;">// RESOURCE SANDBOX</h3>
+          <div id="node-resources">
+            <div class="loader" style="margin: 2rem 0; font-size: 0.8rem;">[ QUERYING.SANDBOX... ]</div>
+          </div>
+        </section>
+
+      </div>
     </div>
+
   </main>
 
   <script>
@@ -299,7 +335,7 @@
     }
 
     function renderState(stateId) {
-      ['loader', 'state-login', 'state-pledge', 'state-intake', 'state-waiting', 'state-dashboard'].forEach(id => {
+      ['loader', 'state-login', 'state-pledge', 'state-intake', 'state-waiting', 'state-dashboard', 'state-node'].forEach(id => {
         document.getElementById(id).classList.add('hidden');
       });
       if(stateId !== 'loader') document.getElementById(`state-${stateId}`).classList.remove('hidden');
@@ -480,7 +516,7 @@
       if (!data || data.length === 0) { container.innerHTML = `<p style="color:var(--text-muted); font-family:'JetBrains Mono', monospace;">[0] ACTIVE NODES FOUND.</p>`; return; }
 
       container.innerHTML = data.map(comm => `
-        <div class="committee-card">
+        <div class="committee-card" style="cursor: pointer;" onclick="openNode('${comm.id}')">
           <div style="display:flex; justify-content:space-between; align-items: flex-start; margin-bottom: 1rem;">
             <h4 style="margin:0; color:#fff; font-size:1.1rem;">${comm.title}</h4>
             <div style="display:flex; gap:8px;">
@@ -494,6 +530,65 @@
           <p style="font-size:0.9rem; line-height:1.6; color:var(--text-primary);">${comm.abstract || 'No parameters provided.'}</p>
         </div>
       `).join('');
+    }
+
+    async function openNode(committeeId) {
+      renderState('loader');
+      
+      try {
+        // 1. Fetch Node Details
+        const { data: node, error: nodeError } = await supabaseClient.from('committees').select('*').eq('id', committeeId).single();
+        if (nodeError) throw nodeError;
+        
+        document.getElementById('node-title').textContent = node.title;
+        document.getElementById('node-focus').textContent = node.focus_area;
+        document.getElementById('node-abstract').textContent = node.abstract;
+
+        // 2. Fetch Roster
+        const { data: roster, error: rosterError } = await supabaseClient
+          .from('committee_requests')
+          .select('profiles(full_name, role)')
+          .eq('committee_id', committeeId)
+          .eq('status', 'approved');
+          
+        const rosterContainer = document.getElementById('node-roster');
+        if (roster && roster.length > 0) {
+          rosterContainer.innerHTML = roster.map(r => `
+            <div style="padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); margin-bottom: 8px; display: flex; justify-content: space-between;">
+              <span style="font-family: 'Inter', sans-serif;">${r.profiles.full_name}</span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--accent-purple); text-transform: uppercase;">${r.profiles.role}</span>
+            </div>
+          `).join('');
+        } else {
+          rosterContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; font-family: monospace;">[ ROSTER EMPTY ]</p>';
+        }
+
+        // 3. Fetch Resources
+        const { data: resources, error: resourceError } = await supabaseClient
+          .from('committee_resources')
+          .select('*')
+          .eq('committee_id', committeeId);
+          
+        const resourceContainer = document.getElementById('node-resources');
+        if (resources && resources.length > 0) {
+          resourceContainer.innerHTML = resources.map(res => `
+            <div style="padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); margin-bottom: 8px;">
+              <div style="display: flex; gap: 8px; margin-bottom: 4px;">
+                <span class="badge" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); color: #fff;">${res.resource_type}</span>
+              </div>
+              <a href="${res.resource_url}" target="_blank" style="color: var(--accent-cyan); text-decoration: none; font-family: 'Space Grotesk', sans-serif; font-size: 0.95rem;">${res.title}</a>
+            </div>
+          `).join('');
+        } else {
+          resourceContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; font-family: monospace;">[ SANDBOX EMPTY ]</p>';
+        }
+
+        renderState('node');
+        
+      } catch (err) {
+        alert("Failed to load node parameters: " + err.message);
+        renderState('dashboard');
+      }
     }
   </script>
 </body>
