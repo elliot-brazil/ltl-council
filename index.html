@@ -621,11 +621,11 @@
             const cursorStyle = res.resource_url === '#' ? 'cursor: default; opacity: 0.6;' : 'cursor: pointer;';
 
             return `
-            <div style="padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); margin-bottom: 8px;">
-              <div style="display: flex; gap: 8px; margin-bottom: 4px;">
-                <span class="badge" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); color: #fff;">${res.resource_type}</span>
-              </div>
-              <a href="${hrefAttr}" ${targetAttr} style="color: var(--accent-cyan); text-decoration: none; font-family: 'Space Grotesk', sans-serif; font-size: 0.95rem; ${cursorStyle}">${res.title}</a>
+            <div style="padding: 12px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); margin-bottom: 8px; display: flex; align-items: center; gap: 12px;">
+              <span class="badge" style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.2); color: var(--text-muted); min-width: 50px; text-align: center;">${res.resource_type}</span>
+              <a href="${hrefAttr}" ${targetAttr} style="color: var(--accent-cyan); text-decoration: none; font-family: 'Space Grotesk', sans-serif; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; transition: text-shadow 0.2s ease; ${cursorStyle}" onmouseover="this.style.textShadow='0 0 8px rgba(0,240,255,0.4)'" onmouseout="this.style.textShadow='none'">
+                > ${res.title}
+              </a>
             </div>
             `;
           }).join('');
