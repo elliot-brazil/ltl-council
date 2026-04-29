@@ -563,25 +563,41 @@
           } else {
             actionContainer.innerHTML = '';
           }
-        } else {
+        } else if (currentProfile.role === 'advisor' || currentProfile.role === 'admin') {
+          // Only render the request button for Advisors and Admins
           actionContainer.innerHTML = `<button style="padding: 6px 12px; font-size: 0.75rem; width: auto;" onclick="requestAttachment('${committeeId}')">REQUEST ACCESS</button>`;
+        } else {
+          // General Stakeholders see nothing
+          actionContainer.innerHTML = '';
         }
 
         // 3. Fetch Roster
+        // Added 'profile_id' to the select string so we have the ID to assign
         const { data: roster, error: rosterError } = await supabaseClient
           .from('committee_requests')
-          .select('profiles(full_name, role)')
+          .select('profile_id, profiles(full_name, role)')
           .eq('committee_id', committeeId)
           .eq('status', 'approved');
           
         const rosterContainer = document.getElementById('node-roster');
         if (roster && roster.length > 0) {
-          rosterContainer.innerHTML = roster.map(r => `
-            <div style="padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); margin-bottom: 8px; display: flex; justify-content: space-between;">
-              <span style="font-family: 'Inter', sans-serif;">${r.profiles.full_name}</span>
+          rosterContainer.innerHTML = roster.map(r => {
+            // Check if the viewer is an admin. If yes, generate the button.
+            const isAdmin = currentProfile.role === 'admin';
+            const assignBtn = isAdmin 
+              ? `<button onclick="assignLead('${committeeId}', '${r.profile_id}')" style="padding: 2px 8px; font-size: 0.65rem; width: auto; margin-left: 12px; border-color: var(--accent-purple); color: #b07cff;">MAKE LEAD</button>` 
+              : '';
+
+            return `
+            <div style="padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+              <div style="display: flex; align-items: center;">
+                <span style="font-family: 'Inter', sans-serif;">${r.profiles.full_name}</span>
+                ${assignBtn}
+              </div>
               <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--accent-purple); text-transform: uppercase;">${r.profiles.role}</span>
             </div>
-          `).join('');
+            `;
+          }).join('');
         } else {
           rosterContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; font-family: monospace;">[ ROSTER EMPTY ]</p>';
         }
@@ -640,6 +656,22 @@
       } else {
         // Refresh the node view to display the new pending badge
         openNode(committeeId); 
+      }
+    }
+
+    async function assignLead(committeeId, profileId) {
+      if (!confirm("Designate this user as the Node Lead?")) return;
+      
+      const { error } = await supabaseClient
+        .from('committees')
+        .update({ profile_id: profileId })
+        .eq('id', committeeId);
+
+      if (error) {
+        alert("Failed to assign lead: " + error.message);
+      } else {
+        // Refresh the node view to show the new lead
+        openNode(committeeId);
       }
     }
   </script>
