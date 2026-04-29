@@ -222,15 +222,17 @@
         <div class="nav-brand">LTL AI COUNCIL</div>
         <div style="display:flex; gap:15px; align-items:center;">
           <span id="welcome-msg" style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: var(--text-muted);"></span>
+          <button class="secondary" style="padding: 6px 12px; font-size: 0.8rem; width: auto; border-color: var(--accent-purple); color: #b07cff;" onclick="openDirectory()">NETWORK REGISTRY</button>
           <button class="secondary" style="padding: 6px 12px; font-size: 0.8rem; width: auto;" onclick="signOut()">DISCONNECT</button>
         </div>
       </div>
 
-    <section>
+      <section>
         <h3 style="color: #fff; margin-bottom: 0.5rem;">Active Nodes [Committees]</h3>
         <div id="committee-list"><div class="loader">[ FETCHING.DATA... ]</div></div>
       </section>
     </div> 
+
     <div id="state-node" class="hidden">
       <div class="nav-bar">
         <div class="nav-brand">LTL AI COUNCIL | <span style="color: var(--accent-cyan);">NODE_WORKSPACE</span></div>
@@ -250,12 +252,13 @@
         </div>
         <p id="node-abstract" style="color: var(--text-primary); line-height: 1.6;"></p>
       </div>
+      
       <div id="chair-admin-panel" class="hidden glass-panel" style="margin-bottom: 2rem; border-color: var(--accent-purple); background: rgba(112, 0, 255, 0.05);">
         <h3 style="color: #b07cff; font-size: 1rem; border-bottom: 1px solid rgba(176, 124, 255, 0.3); padding-bottom: 0.5rem; margin-bottom: 1rem;">// PENDING ACCESS REQUESTS</h3>
         <div id="node-pending-requests"></div>
       </div>
+      
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-        
         <section>
           <h3 style="color: var(--text-muted); font-size: 1rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem; margin-bottom: 1rem;">// ACTIVE ROSTER</h3>
           <div id="node-roster">
@@ -271,7 +274,29 @@
         </section>
       </div>
     </div>
-      <div id="request-modal" class="hidden modal-overlay">
+
+    <div id="state-directory" class="hidden">
+      <div class="nav-bar">
+        <div class="nav-brand">LTL AI COUNCIL | <span style="color: var(--accent-purple);">NETWORK_REGISTRY</span></div>
+        <button class="secondary" style="padding: 6px 12px; font-size: 0.8rem; width: auto;" onclick="renderState('dashboard')">RETURN TO NETWORK</button>
+      </div>
+
+      <div class="glass-panel" style="margin-bottom: 2rem;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 1.5rem;">
+          <div>
+            <h2 style="margin-bottom: 0.5rem; color: #fff;">Advisory Board Registry</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0;">Authorized council advisors and node leadership.</p>
+          </div>
+          <span class="badge purple">SYS.DIRECTORY</span>
+        </div>
+
+        <div id="registry-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
+          <div class="loader" style="grid-column: 1 / -1;">[ QUERYING.REGISTRY... ]</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="request-modal" class="hidden modal-overlay">
       <div class="modal-content">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 1.5rem;">
           <h3 style="color: #fff; margin: 0; font-family: 'Space Grotesk', sans-serif;">INITIATE ACCESS REQUEST</h3>
@@ -367,7 +392,7 @@
     }
 
     function renderState(stateId) {
-      ['loader', 'state-login', 'state-pledge', 'state-intake', 'state-waiting', 'state-dashboard', 'state-node'].forEach(id => {
+      ['loader', 'state-login', 'state-pledge', 'state-intake', 'state-waiting', 'state-dashboard', 'state-node', 'state-directory'].forEach(id => {
         document.getElementById(id).classList.add('hidden');
       });
       if(stateId !== 'loader') document.getElementById(`state-${stateId}`).classList.remove('hidden');
@@ -593,8 +618,8 @@
           if (myRequest.status === 'approved') {
             actionContainer.innerHTML = `
               <div style="display:flex; gap: 10px; align-items: center;">
-                <span class="badge" style="background: rgba(255,255,255,0.1); color: #fff; border-color: rgba(255,255,255,0.2);">SYS.CONNECTED</span>
-                <button onclick="leaveNode('${committeeId}')" style="padding: 4px 8px; font-size: 0.65rem; width: auto; background: rgba(255,0,60,0.1); color: var(--accent-red); border-color: var(--accent-red);">DISCONNECT</button>
+                <span class="badge" style="background: rgba(255,255,255,0.1); color: #fff; border-color: rgba(255,255,255,0.2);">SYS.JOINED</span>
+                <button onclick="leaveNode('${committeeId}')" style="padding: 4px 8px; font-size: 0.65rem; width: auto; background: rgba(255,0,60,0.1); color: var(--accent-red); border-color: var(--accent-red);">LEAVE</button>
               </div>
             `;
           } else if (myRequest.status === 'pending') {
@@ -603,10 +628,8 @@
             actionContainer.innerHTML = '';
           }
         } else if (currentProfile.role === 'advisor' || currentProfile.role === 'admin') {
-          // Pass both ID and Title to the modal
           actionContainer.innerHTML = `<button style="padding: 6px 12px; font-size: 0.75rem; width: auto;" onclick="showRequestModal('${committeeId}', '${node.title.replace(/'/g, "\\'")}')">REQUEST ACCESS</button>`;
         } else {
-          // General Stakeholders see nothing
           actionContainer.innerHTML = '';
         }
 
@@ -791,7 +814,7 @@
     }
 
     async function leaveNode(committeeId) {
-      if (!confirm("Confirm intent to disconnect from this node. This will immediately revoke your workspace access.")) return;
+      if (!confirm("Confirm intent to leave this node. This will immediately revoke your workspace access.")) return;
       
       const { error } = await supabaseClient
         .from('committee_requests')
@@ -800,9 +823,48 @@
         .eq('profile_id', currentUser.id);
 
       if (error) {
-        alert("Disconnection failed: " + error.message);
+        alert("Leave action failed: " + error.message);
       } else {
         openNode(committeeId); 
+      }
+    }
+
+    function openDirectory() {
+      renderState('directory');
+      loadDirectory();
+    }
+
+    async function loadDirectory() {
+      const container = document.getElementById('registry-grid');
+      container.innerHTML = '<div class="loader" style="grid-column: 1 / -1;">[ QUERYING.REGISTRY... ]</div>';
+
+      // Fetch all approved Admins and Advisors
+      const { data, error } = await supabaseClient
+        .from('profiles')
+        .select('*')
+        .in('role', ['advisor', 'admin'])
+        .eq('status', 'approved')
+        .order('full_name', { ascending: true });
+
+      if (error) {
+        container.innerHTML = `<p style="color: var(--accent-red); font-family: 'JetBrains Mono', monospace; grid-column: 1 / -1;">[ DB ERROR: ${error.message} ]</p>`;
+        return;
+      }
+
+      if (data && data.length > 0) {
+        container.innerHTML = data.map(p => `
+          <div style="padding: 1.5rem; background: rgba(0,0,0,0.4); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); transition: border-color 0.2s ease;" onmouseover="this.style.borderColor='var(--accent-purple)'" onmouseout="this.style.borderColor='var(--border-glass)'">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+              <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; color: #fff; font-size: 1.1rem; text-transform: uppercase;">${p.full_name}</span>
+              <span class="badge" style="background: rgba(112, 0, 255, 0.1); color: #b07cff; border-color: var(--accent-purple);">${p.role}</span>
+            </div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;">
+              <a href="mailto:${p.email}" style="color: var(--accent-cyan); text-decoration: none;">> ${p.email}</a>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; font-family: monospace; grid-column: 1 / -1;">[ REGISTRY EMPTY ]</p>';
       }
     }
   </script>
