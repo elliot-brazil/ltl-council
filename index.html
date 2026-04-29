@@ -232,7 +232,10 @@
             <h2 id="node-title" style="margin-bottom: 0.5rem; color: #fff;">[NODE_TITLE]</h2>
             <span id="node-focus" class="badge purple">FOCUS_AREA</span>
           </div>
-          <span class="badge active">SYS.ACTIVE</span>
+          <div style="display:flex; flex-direction: column; align-items: flex-end; gap: 10px;">
+            <span class="badge active">SYS.ACTIVE</span>
+            <div id="node-action-container"></div>
+          </div>
         </div>
         <p id="node-abstract" style="color: var(--text-primary); line-height: 1.6;"></p>
       </div>
@@ -544,7 +547,28 @@
         document.getElementById('node-focus').textContent = node.focus_area;
         document.getElementById('node-abstract').textContent = node.abstract;
 
-        // 2. Fetch Roster
+        // 2. Check Current User Attachment Status
+        const { data: myRequest } = await supabaseClient
+          .from('committee_requests')
+          .select('status')
+          .eq('committee_id', committeeId)
+          .eq('profile_id', currentUser.id)
+          .maybeSingle();
+
+        const actionContainer = document.getElementById('node-action-container');
+        if (myRequest) {
+          if (myRequest.status === 'approved') {
+            actionContainer.innerHTML = '<span class="badge" style="background: rgba(255,255,255,0.1); color: #fff; border-color: rgba(255,255,255,0.2);">SYS.ATTACHED</span>';
+          } else if (myRequest.status === 'pending') {
+            actionContainer.innerHTML = '<span class="badge" style="background: rgba(234, 179, 8, 0.1); color: #eab308; border-color: #ca8a04;">ATTACHMENT PENDING</span>';
+          } else {
+            actionContainer.innerHTML = '';
+          }
+        } else {
+          actionContainer.innerHTML = `<button style="padding: 6px 12px; font-size: 0.75rem; width: auto;" onclick="requestAttachment('${committeeId}')">REQUEST ATTACHMENT</button>`;
+        }
+
+        // 3. Fetch Roster
         const { data: roster, error: rosterError } = await supabaseClient
           .from('committee_requests')
           .select('profiles(full_name, role)')
@@ -563,7 +587,7 @@
           rosterContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; font-family: monospace;">[ ROSTER EMPTY ]</p>';
         }
 
-        // 3. Fetch Resources
+        // 4. Fetch Resources
         const { data: resources, error: resourceError } = await supabaseClient
           .from('committee_resources')
           .select('*')
@@ -571,14 +595,21 @@
           
         const resourceContainer = document.getElementById('node-resources');
         if (resources && resources.length > 0) {
-          resourceContainer.innerHTML = resources.map(res => `
+          resourceContainer.innerHTML = resources.map(res => {
+            // Neutralize dummy '#' links
+            const hrefAttr = res.resource_url === '#' ? 'javascript:void(0)' : res.resource_url;
+            const targetAttr = res.resource_url === '#' ? '' : 'target="_blank"';
+            const cursorStyle = res.resource_url === '#' ? 'cursor: default; opacity: 0.6;' : 'cursor: pointer;';
+
+            return `
             <div style="padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); margin-bottom: 8px;">
               <div style="display: flex; gap: 8px; margin-bottom: 4px;">
                 <span class="badge" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); color: #fff;">${res.resource_type}</span>
               </div>
-              <a href="${res.resource_url}" target="_blank" style="color: var(--accent-cyan); text-decoration: none; font-family: 'Space Grotesk', sans-serif; font-size: 0.95rem;">${res.title}</a>
+              <a href="${hrefAttr}" ${targetAttr} style="color: var(--accent-cyan); text-decoration: none; font-family: 'Space Grotesk', sans-serif; font-size: 0.95rem; ${cursorStyle}">${res.title}</a>
             </div>
-          `).join('');
+            `;
+          }).join('');
         } else {
           resourceContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; font-family: monospace;">[ SANDBOX EMPTY ]</p>';
         }
@@ -588,6 +619,28 @@
       } catch (err) {
         alert("Failed to load node parameters: " + err.message);
         renderState('dashboard');
+      }
+    }
+
+    async function requestAttachment(committeeId) {
+      const btn = document.querySelector('#node-action-container button');
+      if(btn) { btn.innerText = "TRANSMITTING..."; btn.disabled = true; }
+
+      const payload = {
+        profile_id: currentUser.id,
+        committee_id: committeeId,
+        request_type: 'join_existing',
+        status: 'pending'
+      };
+
+      const { error } = await supabaseClient.from('committee_requests').insert([payload]);
+
+      if (error) {
+        alert("Attachment request failed: " + error.message);
+        if(btn) { btn.innerText = "REQUEST ATTACHMENT"; btn.disabled = false; }
+      } else {
+        // Refresh the node view to display the new pending badge
+        openNode(committeeId); 
       }
     }
   </script>
