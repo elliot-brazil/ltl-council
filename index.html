@@ -618,14 +618,18 @@
           .eq('status', 'approved');
           
         const rosterContainer = document.getElementById('node-roster');
-        if (roster && roster.length > 0) {
+        
+        if (rosterError) {
+          // Expose the silent error
+          rosterContainer.innerHTML = `<p style="color: var(--accent-red); font-size: 0.85rem; font-family: monospace;">[ DB ERROR: ${rosterError.message} ]</p>`;
+          console.error("Roster Error:", rosterError);
+        } else if (roster && roster.length > 0) {
           rosterContainer.innerHTML = roster.map(r => {
             const isAdmin = currentProfile.role === 'admin';
             const assignBtn = isAdmin 
               ? `<button onclick="assignLead('${committeeId}', '${r.profile_id}')" style="padding: 2px 8px; font-size: 0.65rem; width: auto; margin-left: 12px; border-color: var(--accent-purple); color: #b07cff;">MAKE LEAD</button>` 
               : '';
 
-            // Generate the audit badge if an approver exists
             const approverText = r.approver 
               ? `<span style="font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; color: var(--text-muted); margin-left: 8px;">[VERIFIED BY: ${r.approver.full_name.toUpperCase()}]</span>` 
               : '';
