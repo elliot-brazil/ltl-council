@@ -591,7 +591,12 @@
         const actionContainer = document.getElementById('node-action-container');
         if (myRequest) {
           if (myRequest.status === 'approved') {
-            actionContainer.innerHTML = '<span class="badge" style="background: rgba(255,255,255,0.1); color: #fff; border-color: rgba(255,255,255,0.2);">SYS.CONNECTED</span>';
+            actionContainer.innerHTML = `
+              <div style="display:flex; gap: 10px; align-items: center;">
+                <span class="badge" style="background: rgba(255,255,255,0.1); color: #fff; border-color: rgba(255,255,255,0.2);">SYS.CONNECTED</span>
+                <button onclick="leaveNode('${committeeId}')" style="padding: 4px 8px; font-size: 0.65rem; width: auto; background: rgba(255,0,60,0.1); color: var(--accent-red); border-color: var(--accent-red);">DISCONNECT</button>
+              </div>
+            `;
           } else if (myRequest.status === 'pending') {
             actionContainer.innerHTML = '<span class="badge" style="background: rgba(234, 179, 8, 0.1); color: #eab308; border-color: #ca8a04;">REQUEST PENDING</span>';
           } else {
@@ -606,26 +611,30 @@
         }
 
         // 3. Fetch Roster
-        // Added 'profile_id' to the select string so we have the ID to assign
         const { data: roster, error: rosterError } = await supabaseClient
           .from('committee_requests')
-          .select('profile_id, profiles(full_name, role)')
+          .select('profile_id, profiles!profile_id(full_name, role), approver:profiles!resolved_by(full_name)')
           .eq('committee_id', committeeId)
           .eq('status', 'approved');
           
         const rosterContainer = document.getElementById('node-roster');
         if (roster && roster.length > 0) {
           rosterContainer.innerHTML = roster.map(r => {
-            // Check if the viewer is an admin. If yes, generate the button.
             const isAdmin = currentProfile.role === 'admin';
             const assignBtn = isAdmin 
               ? `<button onclick="assignLead('${committeeId}', '${r.profile_id}')" style="padding: 2px 8px; font-size: 0.65rem; width: auto; margin-left: 12px; border-color: var(--accent-purple); color: #b07cff;">MAKE LEAD</button>` 
+              : '';
+
+            // Generate the audit badge if an approver exists
+            const approverText = r.approver 
+              ? `<span style="font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; color: var(--text-muted); margin-left: 8px;">[VERIFIED BY: ${r.approver.full_name.toUpperCase()}]</span>` 
               : '';
 
             return `
             <div style="padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
               <div style="display: flex; align-items: center;">
                 <span style="font-family: 'Inter', sans-serif;">${r.profiles.full_name}</span>
+                ${approverText}
                 ${assignBtn}
               </div>
               <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--accent-purple); text-transform: uppercase;">${r.profiles.role}</span>
@@ -767,13 +776,29 @@
       
       const { error } = await supabaseClient
         .from('committee_requests')
-        .update({ status: newStatus })
+        .update({ status: newStatus, resolved_by: currentUser.id })
         .eq('id', requestId);
         
       if (error) {
         alert("Execution failed: " + error.message);
       } else {
-        openNode(committeeId); // Refresh the UI immediately
+        openNode(committeeId); 
+      }
+    }
+
+    async function leaveNode(committeeId) {
+      if (!confirm("Confirm intent to disconnect from this node. This will immediately revoke your workspace access.")) return;
+      
+      const { error } = await supabaseClient
+        .from('committee_requests')
+        .delete()
+        .eq('committee_id', committeeId)
+        .eq('profile_id', currentUser.id);
+
+      if (error) {
+        alert("Disconnection failed: " + error.message);
+      } else {
+        openNode(committeeId); 
       }
     }
   </script>
