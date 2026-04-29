@@ -512,7 +512,7 @@
     // --- 6. DASHBOARD LOGIC ---
     async function loadDashboard() {
       const container = document.getElementById('committee-list');
-      const { data, error } = await supabaseClient.from('committees').select('*, profiles(full_name)').eq('status', 'Active');
+      const { data, error } = await supabaseClient.from('committees').select('*, profiles!profile_id(full_name)').eq('status', 'Active');
       
       if (error) { 
         container.innerHTML = `<p style="color: var(--accent-red); font-family: 'JetBrains Mono', monospace;">DB ERROR: ${error.message}</p>`; 
