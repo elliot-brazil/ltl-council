@@ -646,14 +646,13 @@
         // 3. Fetch Roster
         const { data: roster, error: rosterError } = await supabaseClient
           .from('committee_requests')
-          .select('profile_id, profiles!profile_id(full_name, role), approver:profiles!resolved_by(full_name)')
+          .select('profile_id, profiles!profile_id(full_name, role)') 
           .eq('committee_id', committeeId)
           .eq('status', 'approved');
           
         const rosterContainer = document.getElementById('node-roster');
         
         if (rosterError) {
-          // Expose the silent error
           rosterContainer.innerHTML = `<p style="color: var(--accent-red); font-size: 0.85rem; font-family: monospace;">[ DB ERROR: ${rosterError.message} ]</p>`;
           console.error("Roster Error:", rosterError);
         } else if (roster && roster.length > 0) {
@@ -663,15 +662,10 @@
               ? `<button onclick="assignLead('${committeeId}', '${r.profile_id}')" style="padding: 2px 8px; font-size: 0.65rem; width: auto; margin-left: 12px; border-color: var(--accent-purple); color: #b07cff;">MAKE LEAD</button>` 
               : '';
 
-            const approverText = r.approver 
-              ? `<span style="font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; color: var(--text-muted); margin-left: 8px;">[VERIFIED BY: ${r.approver.full_name.toUpperCase()}]</span>` 
-              : '';
-
             return `
             <div style="padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
               <div style="display: flex; align-items: center;">
                 <span style="font-family: 'Inter', sans-serif;">${r.profiles.full_name}</span>
-                ${approverText}
                 ${assignBtn}
               </div>
               <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--accent-purple); text-transform: uppercase;">${r.profiles.role}</span>
