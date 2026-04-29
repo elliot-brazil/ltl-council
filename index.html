@@ -717,7 +717,7 @@
           adminPanel.classList.remove('hidden');
           const { data: pending, error: pendingError } = await supabaseClient
             .from('committee_requests')
-            .select('id, message, profiles(full_name, role)')
+            .select('id, message, profiles!profile_id(full_name, role)') 
             .eq('committee_id', committeeId)
             .eq('status', 'pending');
 
