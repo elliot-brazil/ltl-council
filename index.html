@@ -514,7 +514,11 @@
       const container = document.getElementById('committee-list');
       const { data, error } = await supabaseClient.from('committees').select('*, profiles(full_name)').eq('status', 'Active');
       
-      if (error) { container.innerHTML = `<p>Error retrieving nodes.</p>`; return; }
+      if (error) { 
+        container.innerHTML = `<p style="color: var(--accent-red); font-family: 'JetBrains Mono', monospace;">DB ERROR: ${error.message}</p>`; 
+        console.error("Dashboard DB Error:", error); 
+        return; 
+      }
       if (!data || data.length === 0) { container.innerHTML = `<p style="color:var(--text-muted); font-family:'JetBrains Mono', monospace;">[0] ACTIVE NODES FOUND.</p>`; return; }
 
       container.innerHTML = data.map(comm => `
