@@ -784,15 +784,31 @@
     async function resolveRequest(requestId, committeeId, newStatus) {
       if (!confirm(`Confirm decision to mark request as ${newStatus.toUpperCase()}?`)) return;
       
-      const { error } = await supabaseClient
-        .from('committee_requests')
-        .update({ status: newStatus, resolved_by: currentUser.id })
-        .eq('id', requestId);
-        
-      if (error) {
-        alert("Execution failed: " + error.message);
-      } else {
+      try {
+        // 1. Update the request status
+        const { data: requestData, error: reqError } = await supabaseClient
+          .from('committee_requests')
+          .update({ status: newStatus, resolved_by: currentUser.id })
+          .eq('id', requestId)
+          .select('profile_id')
+          .single();
+          
+        if (reqError) throw reqError;
+
+        // 2. If approved, upgrade the user's global profile status to grant app access
+        if (newStatus === 'approved' && requestData) {
+          const { error: profError } = await supabaseClient
+            .from('profiles')
+            .update({ status: 'approved' })
+            .eq('id', requestData.profile_id);
+            
+          if (profError) throw profError;
+        }
+
         openNode(committeeId); 
+        
+      } catch (err) {
+        alert("Execution failed: " + err.message);
       }
     }
 
