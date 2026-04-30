@@ -160,42 +160,6 @@
     </div>
   </div>
 
-    <div class="glass-panel">
-      <h2>Welcome to the Council</h2>
-      <p style="color: var(--text-muted); margin-bottom: 2rem; line-height: 1.6;">You are fully registered but not currently attached to any active Nodes. You may propose a new Node below, or wait to be invited to an existing one.</p>
-      
-      <form id="intake-form">
-        <label>Propose New Node Title</label>
-        <input type="text" id="new-committee-title" required placeholder="e.g., RFP Automation Workgroup">
-        
-        <label>Focus Area</label>
-        <select id="focus-area" required>
-          <option value="" disabled selected>[ SELECT DOMAIN ]</option>
-          <option value="Data & APIs">Data & APIs</option>
-          <option value="Pricing">Pricing</option>
-          <option value="Operations">Operations</option>
-          <option value="Education">Education</option>
-        </select>
-
-        <label>Abstract / Mission</label>
-        <textarea id="lead-abstract" rows="4" required placeholder="Briefly describe the goal of this committee..."></textarea>
-        
-        <button type="submit" id="intake-btn">Transmit Application</button>
-      </form>
-    </div>
-  </div>
-
-  <div id="state-waiting" class="container hidden">
-    <div class="glass-panel" style="text-align: center; margin-top: 10vh;">
-      <h2>Transmission Pending</h2>
-      <p style="color: var(--text-muted); line-height: 1.6;">Your request to join the LTL AI Council has been received and is awaiting Chair/Admin approval.</p>
-      <div style="margin: 2rem 0; font-family: 'JetBrains Mono', monospace; color: var(--accent-purple); font-size: 1.2rem;">
-        [ SECURE HOLD ]
-      </div>
-      <button class="secondary" onclick="signOut()">Disconnect</button>
-    </div>
-  </div>
-
   <div id="state-dashboard" class="container hidden">
     <div class="header-nav">
       <div>
@@ -356,7 +320,7 @@
         hasFatalError = true;
         console.error("Session Error:", err);
         
-        ['state-login', 'state-pledge', 'state-intake', 'state-waiting', 'state-dashboard', 'state-node', 'state-directory'].forEach(id => {
+        ['state-login', 'state-pledge', 'state-dashboard', 'state-node', 'state-directory'].forEach(id => {
           document.getElementById(id).classList.add('hidden');
         });
         
@@ -375,7 +339,7 @@
     }
 
     function renderState(stateId) {
-      ['loader', 'state-login', 'state-pledge', 'state-intake', 'state-waiting', 'state-dashboard', 'state-node', 'state-directory'].forEach(id => {
+      ['loader', 'state-login', 'state-pledge', 'state-dashboard', 'state-node', 'state-directory'].forEach(id => {
         document.getElementById(id).classList.add('hidden');
       });
       const target = stateId === 'loader' ? 'loader' : `state-${stateId}`;
