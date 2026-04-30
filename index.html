@@ -142,8 +142,8 @@
         <label>Primary Role</label>
         <select id="role-select" required onchange="togglePledgeText()">
           <option value="" disabled selected>[ SELECT ROLE ]</option>
-          <option value="stakeholder">Stakeholder (For industry members seeking association updates)</option>
-          <option value="advisor">Council Advisor (For Committee Volunteers)</option>
+          <option value="stakeholder">Stakeholder (Committee Participant)</option>
+          <option value="advisor">Council Advisor (Subject Matter Expert / Reviewer)</option>
         </select>
 
         <div id="legal-container" class="hidden">
@@ -171,9 +171,12 @@
     <div class="header-nav">
       <div>
         <h3 style="margin:0;">NETWORK.INTAKE</h3>
-        <span class="terminal-text">STATUS: UNAFFILIATED</span>
+        <span class="terminal-text">NODE PROPOSAL FORM</span>
       </div>
-      <button class="secondary" style="width: auto; padding: 0.5rem 1rem;" onclick="signOut()">Disconnect</button>
+      <div style="display: flex; gap: 10px;">
+        <button class="secondary hidden" id="intake-cancel-btn" style="width: auto; padding: 0.5rem 1rem;" onclick="loadDashboard(); renderState('dashboard');">Cancel</button>
+        <button class="secondary" id="intake-disconnect-btn" style="width: auto; padding: 0.5rem 1rem; border-color: var(--accent-red); color: var(--accent-red);" onclick="signOut()">Disconnect</button>
+      </div>
     </div>
 
     <div class="glass-panel">
@@ -219,6 +222,7 @@
         <span id="welcome-msg" class="terminal-text"></span>
       </div>
       <div style="display: flex; gap: 10px;">
+        <button class="secondary" style="width: auto; padding: 0.5rem 1rem; border-color: var(--accent-purple); color: #b07cff;" onclick="renderState('intake')">Propose Node</button>
         <button class="secondary" style="width: auto; padding: 0.5rem 1rem;" onclick="openDirectory()">Registry</button>
         <button class="secondary" style="width: auto; padding: 0.5rem 1rem; border-color: var(--accent-red); color: var(--accent-red);" onclick="signOut()">Disconnect</button>
       </div>
@@ -367,14 +371,17 @@
           if (reqsError) throw reqsError;
 
           if (reqs && reqs.length > 0) renderState('waiting');
-          else renderState('intake'); 
+          else {
+            document.getElementById('intake-cancel-btn').classList.add('hidden');
+            document.getElementById('intake-disconnect-btn').classList.remove('hidden');
+            renderState('intake'); 
+          }
         } else if (profile.status === 'approved') {
+          document.getElementById('intake-cancel-btn').classList.remove('hidden');
+          document.getElementById('intake-disconnect-btn').classList.add('hidden');
+          
           document.getElementById('welcome-msg').textContent = `USR:${(profile.full_name || profile.email || 'UNKNOWN').toUpperCase()}`;
           loadDashboard(); renderState('dashboard');
-        } else if (profile.status === 'rejected') {
-          document.getElementById('login-msg').style.color = 'var(--accent-red)';
-          document.getElementById('login-msg').innerText = "ACCOUNT DEACTIVATED. CONTACT SYS.ADMIN.";
-          renderState('login');
         } else {
           throw new Error(`ACCESS DENIED: Unknown status '${profile.status}'.`);
         }
@@ -575,9 +582,16 @@
       const { error } = await supabaseClient.from('committee_requests').insert([payload]);
       btn.innerText = "Transmit Application"; btn.disabled = false;
 
-      if (error) alert("Transmission failed: " + error.message);
-      else checkSession(); 
-    }
+      if (error) {
+        alert("Transmission failed: " + error.message);
+      } else {
+        alert("Proposal transmitted for Advisor review.");
+        if (currentProfile.status === 'approved') {
+          loadDashboard(); renderState('dashboard'); // Route back to dashboard
+        } else {
+          checkSession(); // Route to waiting room for new users
+        }
+      }
 
     // --- 6. DASHBOARD LOGIC ---
     async function loadDashboard() {
@@ -644,9 +658,9 @@
           } else if (myRequest.status === 'pending') {
             actionContainer.innerHTML = '<span class="badge" style="background: rgba(234, 179, 8, 0.1); color: #eab308; border-color: #ca8a04;">REQUEST PENDING</span>';
           } else { actionContainer.innerHTML = ''; }
-        } else if (currentProfile.role === 'advisor' || currentProfile.role === 'admin') {
-          actionContainer.innerHTML = `<button style="padding: 6px 12px; font-size: 0.75rem; width: auto;" onclick="showRequestModal('${committeeId}')">REQUEST ACCESS</button>`;
-        } else { actionContainer.innerHTML = ''; }
+        } else {
+          actionContainer.innerHTML = `<button style="padding: 6px 12px; font-size: 0.75rem; width: auto;" onclick="showRequestModal('${committeeId}')">REQUEST ACCESS</button>`; 
+        }
 
         // Render Roster
         const rosterContainer = document.getElementById('node-roster');
