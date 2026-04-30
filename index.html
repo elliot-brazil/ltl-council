@@ -630,13 +630,16 @@
     async function assignLead(committeeId, profileId) {
       if (!confirm("Designate this user as the Node Lead?")) return;
       
-      const { error } = await supabaseClient
+      const { data, error } = await supabaseClient
         .from('committees')
         .update({ profile_id: profileId })
-        .eq('id', committeeId);
+        .eq('id', committeeId)
+        .select(); // <--- Forces the DB to return the modified row
 
       if (error) {
         alert("Failed to assign lead: " + error.message);
+      } else if (!data || data.length === 0) {
+        alert("Silent Database Rejection: The database blocked the update. Check RLS policies.");
       } else {
         // Refresh the node view to show the new lead
         openNode(committeeId);
