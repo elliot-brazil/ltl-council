@@ -139,22 +139,15 @@
         <label>Full Name</label>
         <input type="text" id="fullName" required placeholder="First Last">
 
-        <label>Primary Role</label>
-        <select id="role-select" required onchange="togglePledgeText()">
-          <option value="" disabled selected>[ SELECT ROLE ]</option>
-          <option value="stakeholder">Stakeholder (Committee Participant)</option>
-          <option value="advisor">Council Advisor (Subject Matter Expert / Reviewer)</option>
-        </select>
-
-        <div id="legal-container" class="hidden">
-          <label>Stakeholder & Advisor Pledge</label>
-          <div id="legal-text" style="height: 200px; overflow-y: scroll; padding: 1rem; background: rgba(0,0,0,0.5); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 1.5rem;">
-            </div>
-          
-          <label>Attach to Active Nodes (Optional)</label>
-          <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: -5px; margin-bottom: 15px;">Select any committees you wish to join. Access is subject to Admin approval.</p>
-          <div id="pledge-committees-list" style="margin-bottom: 2rem;">
-            </div>
+        <div id="legal-container">
+          <label>LTL AI Adoption Council Pledge</label>
+          <div id="legal-text" style="padding: 1.5rem; background: rgba(0,0,0,0.5); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 1.5rem;">
+            <p style="margin-top: 0;">As a member of the LTL AI Adoption Council, I commit to upholding the highest standards of professional conduct, acting with integrity, respect, and accountability in all interactions.</p>
+            <p>I will engage without overt sales intent, contributing knowledge and insights for the collective benefit of the group rather than personal gain.</p>
+            <p>I will actively participate with a collaborative spirit, sharing ideas openly while safeguarding all proprietary and confidential information entrusted to me or my organization.</p>
+            <p>I will respect diverse perspectives and encourage thoughtful, constructive debate, recognizing that progress is strengthened through informed and respectful exchange.</p>
+            <p style="margin-bottom: 0;">Through these commitments, I aim to support responsible AI adoption and advance the LTL industry together.</p>
+          </div>
 
           <label class="checkbox-label" style="background: transparent; border: none; padding: 0;">
             <input type="checkbox" required>
@@ -166,17 +159,6 @@
       </form>
     </div>
   </div>
-
-  <div id="state-intake" class="container hidden">
-    <div class="header-nav">
-      <div>
-        <h3 style="margin:0;">NETWORK.INTAKE</h3>
-        <span class="terminal-text">NODE PROPOSAL FORM</span>
-      </div>
-      <div style="display: flex; gap: 10px;">
-        <button class="secondary" style="width: auto; padding: 0.5rem 1rem; border-color: var(--accent-red); color: var(--accent-red);" onclick="signOut()">Disconnect</button>
-      </div>
-    </div>
 
     <div class="glass-panel">
       <h2>Welcome to the Council</h2>
@@ -364,13 +346,6 @@
         if (!profile.pledge_version) {
           document.getElementById('pledge-email').textContent = profile.email;
           renderState('pledge');
-        } else if (profile.status === 'pending') {
-          const { data: reqs, error: reqsError } = await supabaseClient.from('committee_requests').select('id').eq('profile_id', profile.id);
-          if (reqsError) throw reqsError;
-
-          if (reqs && reqs.length > 0) renderState('waiting');
-          else renderState('intake'); 
-          
         } else if (profile.status === 'approved') {
           document.getElementById('welcome-msg').textContent = `USR:${(profile.full_name || profile.email || 'UNKNOWN').toUpperCase()}`;
           loadDashboard(); renderState('dashboard');
@@ -440,98 +415,18 @@
     document.getElementById('intake-form').addEventListener('submit', handleIntakeSubmit);
     document.getElementById('request-form').addEventListener('submit', submitAttachmentRequest);
 
-    const advisorPledge = `
-      <p><strong>LTL AI Council — Advisor Pledge</strong><br>
-      This document constitutes the formal pledge ("Agreement") required for participation as a Council Advisor within the Understand LTL ("ULTL") AI Council program. By executing this document, you (the "Advisor") affirm your commitment to the purpose and guidelines of the Council.</p>
-      <p><strong>1. Role and Commitment</strong><br>
-      1.1 The Advisor agrees to participate voluntarily to provide insights, strategic guidance, and technological expertise to ULTL Stakeholders regarding artificial intelligence and Less-Than-Truckload (LTL) logistics.<br>
-      1.2 The Advisor acknowledges that their participation is aimed at fostering industry improvement, standardization, and education.</p>
-      <p><strong>2. Professional Conduct & Conflict of Interest</strong><br>
-      2.1 The Advisor will maintain the highest standards of professional conduct and objectivity.<br>
-      2.2 The Advisor shall promptly disclose any actual or potential conflict of interest that may arise during engagements with Stakeholders.<br>
-      2.3 The Advisor will not use Council interactions primarily as a sales channel or to aggressively solicit business. While subsequent commercial relationships may naturally form outside the Council context, the primary focus within the Council is advisory.</p>
-      <p><strong>3. Confidentiality</strong><br>
-      3.1 The Advisor agrees to hold in strict confidence any non-public, proprietary information shared by Stakeholders or ULTL ("Confidential Information").<br>
-      3.2 Confidential Information shall be used solely for the purpose of providing advisory guidance within the Council.<br>
-      3.3 This confidentiality obligation survives the termination of the Advisor's participation in the Council.</p>
-      <p><strong>4. No Compensation</strong><br>
-      The Advisor understands that participation is voluntary and they will not receive monetary compensation, royalties, or commissions from ULTL or Stakeholders for the advice rendered under the auspices of the Council.</p>
-      <p><strong>5. Limitation of Liability</strong><br>
-      5.1 The Advisor provides guidance based on their experience and knowledge; however, all recommendations are provided "as-is" without warranty of any kind.<br>
-      5.2 The Advisor shall not be held liable for any decisions, actions, or financial outcomes resulting from a Stakeholder's implementation of the Advisor's guidance.</p>
-    `;
-
-    const stakeholderPledge = `
-      <p><strong>LTL AI Council — Stakeholder Pledge</strong><br>
-      This document ("Agreement") sets forth the expectations and requirements for Stakeholders (Carriers, Shippers, 3PLs, or technological practitioners) seeking to engage with the Understand LTL ("ULTL") AI Council program. This Agreement is effective as of the date indicated below.</p>
-      <p><strong>1. Eligibility</strong><br>
-      1.1 The Stakeholder affirms and attests that they are a ULTL member in good standing at the time of executing this Agreement and throughout the period of engagement with the Council program.<br>
-      1.2 Membership in good standing means the Stakeholder has not been suspended or expelled, and they abide by ULTL's Stakeholder pledge.</p>
-      <p><strong>2. Purpose of Engagement</strong><br>
-      The Stakeholder requests the voluntary participation in the ULTL LTL AI Council Advisors for the limited purpose of obtaining insights, experience, and references to assist in improving transportation or supply chain practices.</p>
-      <p><strong>3. Stakeholder Commitments (Pledge)</strong><br>
-      The Stakeholder hereby pledges that:<br>
-      3.1 Good Faith Engagement - The intent of engagement is solely to seek or provide professional assistance, not to solicit, sell, or promote products or services in the course of the Council interaction.<br>
-      3.2 No Commercial Restriction Outside Council - It is understood that no Council Advisor is prohibited from doing business directly with members outside of Council engagements; however, such business shall be conducted outside and independent of the Council program.<br>
-      3.3 Conflict of Interest Cooperation - If a Council Advisor identifies a material conflict of interest or direct competitive situation involving the Stakeholder, the Council Advisor may recuse themselves and, where feasible, ULTL may assign another qualified Advisor.<br>
-      3.4 No Monetary Compensation - The Stakeholder shall not offer, provide, or facilitate any form of direct monetary compensation, gifts, or commissions to Council Advisors for services rendered through the Council program.<br>
-      3.5 Professional Conduct - The Stakeholder will interact with Council Advisors in a professional, respectful, and collaborative manner.</p>
-      <p><strong>4. Confidentiality</strong><br>
-      4.1 Definition - "Confidential Information" means all non-public, proprietary, or sensitive business information disclosed during the Council engagement, whether oral, written, digital, or otherwise recorded.<br>
-      4.2 Obligation - The Stakeholder agrees to maintain in strict confidence all Confidential Information shared by Council Advisors or ULTL, and to use such information exclusively for the intended advisory purpose.<br>
-      4.3 Exclusions - Confidential Information does not include information that: (i) is or becomes publicly available without breach of this Agreement; (ii) is rightfully received from a third party without restriction; or (iii) must be disclosed pursuant to legal process, provided that prompt written notice is given to ULTL before disclosure.<br>
-      4.4 Term - Confidentiality obligations commence on the Effective Date and remain in force for three (3) years after the conclusion of the Council engagement.<br>
-      4.5 Survival - This Section 4 shall survive termination or expiration of this Agreement.</p>
-      <p><strong>5. Disclaimer of Liability</strong><br>
-      5.1 Advisory Nature - Council Advisors provide recommendations, guidance, and suggestions on a voluntary basis; such input should be considered informational only and not a substitute for the Stakeholder's own professional judgment or independent verification.<br>
-      5.2 No Warranty - ULTL and Council Advisors make no warranties, express or implied, regarding the accuracy, completeness, or applicability of advice provided.<br>
-      5.3 Limitation of Liability - To the fullest extent permitted by law, ULTL, its officers, directors, employees, volunteers, and Council Advisors shall not be liable for any claims, damages, losses, costs, or expenses arising from or related to the Stakeholder's reliance on Council interactions.<br>
-      5.4 Indemnification - The Stakeholder agrees to indemnify and hold harmless ULTL and Council Advisors from claims resulting from actions taken or not taken-based on Council advice.</p>
-      <p><strong>6. Term and Termination</strong><br>
-      This Agreement is effective on the date signed by the Stakeholder and shall remain in effect until the conclusion of the Council engagement, unless terminated earlier by ULTL. Sections 4 (Confidentiality) and 5 (Disclaimer of Liability) survive termination.</p>
-      <p><strong>7. Governing Law</strong><br>
-      This Agreement is governed by and construed in accordance with the laws of the State of [State of Incorporation], without regard to conflict of law provisions.</p>
-      <p><strong>8. Entire Agreement</strong><br>
-      This Agreement constitutes the entire understanding between the Stakeholder and ULTL concerning Council engagement and supersedes all prior oral or written understandings.</p>
-    `;
-
-    async function togglePledgeText() {
-      const role = document.getElementById('role-select').value;
-      const container = document.getElementById('legal-container');
-      const textDiv = document.getElementById('legal-text');
-      const commContainer = document.getElementById('pledge-committees-list');
-      
-      if (!role) { container.classList.add('hidden'); return; }
-      textDiv.innerHTML = role === 'advisor' ? advisorPledge : stakeholderPledge;
-      
-      // Load active committees into checkboxes
-      const { data } = await supabaseClient.from('committees').select('id, title').eq('status', 'Active');
-      if (data && data.length > 0) {
-        commContainer.innerHTML = data.map(c => `
-          <label class="checkbox-label">
-            <input type="checkbox" value="${c.id}" class="committee-checkbox">
-            ${esc(c.title)}
-          </label>
-        `).join('');
-      } else {
-        commContainer.innerHTML = '<span style="color:var(--text-muted); font-size: 0.85rem;">[ NO ACTIVE NODES FOUND ]</span>';
-      }
-
-      container.classList.remove('hidden');
-    }
-
     async function handlePledgeSubmit(e) {
       e.preventDefault();
       const btn = document.getElementById('sign-btn');
       const fullName = document.getElementById('fullName').value;
-      const role = document.getElementById('role-select').value;
-      
-      const selectedCommittees = Array.from(document.querySelectorAll('.committee-checkbox:checked')).map(cb => cb.value);
 
       btn.innerText = "EXECUTING..."; btn.disabled = true;
       
       const { error: profileError } = await supabaseClient.from('profiles').update({
-        full_name: fullName, role: role, pledge_version: role === 'advisor' ? 'advisor_v1' : 'stakeholder_v1'
+        full_name: fullName, 
+        role: 'stakeholder', 
+        status: 'approved', 
+        pledge_version: 'unified_v1'
       }).eq('id', currentUser.id);
       
       if (profileError) {
@@ -539,49 +434,11 @@
         btn.innerText = "Sign & Execute Contract"; btn.disabled = false;
         return;
       }
-
-      if (selectedCommittees.length > 0) {
-        const requests = selectedCommittees.map(cid => ({
-          profile_id: currentUser.id,
-          committee_id: cid,
-          request_type: 'join_existing',
-          status: 'pending'
-        }));
-        
-        const { error: reqError } = await supabaseClient.from('committee_requests').insert(requests);
-        if (reqError) {
-          console.error("Committee Request Error:", reqError);
-          alert("Pledge executed, but node attachment failed. Contact sys.admin.");
-        }
-      }
       
       checkSession(); 
     }
 
-    // --- 5. INTAKE REQUEST LOGIC (For New Proposals Only) ---
-    async function handleIntakeSubmit(e) {
-      e.preventDefault();
-      const btn = document.getElementById('intake-btn');
-      btn.innerText = "TRANSMITTING..."; btn.disabled = true;
-
-      const payload = { 
-        profile_id: currentUser.id, 
-        request_type: 'lead_new', 
-        status: 'pending',
-        message: `PROPOSED TITLE: ${document.getElementById('new-committee-title').value}\nFOCUS AREA: ${document.getElementById('focus-area').value}\n\nABSTRACT:\n${document.getElementById('lead-abstract').value}`
-      };
-
-      const { error } = await supabaseClient.from('committee_requests').insert([payload]);
-      btn.innerText = "Transmit Application"; btn.disabled = false;
-
-      if (error) {
-        alert("Transmission failed: " + error.message);
-      } else {
-        checkSession(); 
-      }
-    }
-
-    // --- 6. DASHBOARD LOGIC ---
+    // --- 5. DASHBOARD LOGIC ---
     async function loadDashboard() {
       const container = document.getElementById('committee-list');
       const { data, error } = await supabaseClient.from('committees').select('*, profiles!profile_id(full_name)').eq('status', 'Active');
