@@ -671,11 +671,10 @@
       const container = document.getElementById('registry-grid');
       container.innerHTML = '<div class="loader" style="grid-column: 1 / -1;">[ QUERYING.REGISTRY... ]</div>';
 
-      // Fetch all approved Admins and Advisors
       const { data, error } = await supabaseClient
         .from('profiles')
         .select('*')
-        .in('role', ['advisor', 'admin'])
+        .in('role', ['advisor', 'admin', 'stakeholder'])
         .eq('status', 'approved')
         .order('full_name', { ascending: true });
 
