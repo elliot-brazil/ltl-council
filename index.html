@@ -517,10 +517,7 @@
           resourceContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; font-family: monospace;">[ SANDBOX EMPTY ]</p>'; 
         }
         
-        const adminPanel = document.getElementById('chair-admin-panel');
-        
         // 5. Fetch Pending Requests (Admin or Chair Only)
-        const isChairOrAdmin = currentProfile.role === 'admin' || currentProfile.id === node.profile_id;
         const adminPanel = document.getElementById('chair-admin-panel');
         
         if (isChairOrAdmin) {
