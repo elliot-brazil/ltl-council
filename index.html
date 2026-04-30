@@ -174,8 +174,7 @@
         <span class="terminal-text">NODE PROPOSAL FORM</span>
       </div>
       <div style="display: flex; gap: 10px;">
-        <button class="secondary hidden" id="intake-cancel-btn" style="width: auto; padding: 0.5rem 1rem;" onclick="loadDashboard(); renderState('dashboard');">Cancel</button>
-        <button class="secondary" id="intake-disconnect-btn" style="width: auto; padding: 0.5rem 1rem; border-color: var(--accent-red); color: var(--accent-red);" onclick="signOut()">Disconnect</button>
+        <button class="secondary" style="width: auto; padding: 0.5rem 1rem; border-color: var(--accent-red); color: var(--accent-red);" onclick="signOut()">Disconnect</button>
       </div>
     </div>
 
@@ -222,7 +221,6 @@
         <span id="welcome-msg" class="terminal-text"></span>
       </div>
       <div style="display: flex; gap: 10px;">
-        <button class="secondary" style="width: auto; padding: 0.5rem 1rem; border-color: var(--accent-purple); color: #b07cff;" onclick="renderState('intake')">Propose Node</button>
         <button class="secondary" style="width: auto; padding: 0.5rem 1rem;" onclick="openDirectory()">Registry</button>
         <button class="secondary" style="width: auto; padding: 0.5rem 1rem; border-color: var(--accent-red); color: var(--accent-red);" onclick="signOut()">Disconnect</button>
       </div>
@@ -366,20 +364,14 @@
         if (!profile.pledge_version) {
           document.getElementById('pledge-email').textContent = profile.email;
           renderState('pledge');
-        } else if (profile.status === 'pending') {
+        } } else if (profile.status === 'pending') {
           const { data: reqs, error: reqsError } = await supabaseClient.from('committee_requests').select('id').eq('profile_id', profile.id);
           if (reqsError) throw reqsError;
 
           if (reqs && reqs.length > 0) renderState('waiting');
-          else {
-            document.getElementById('intake-cancel-btn').classList.add('hidden');
-            document.getElementById('intake-disconnect-btn').classList.remove('hidden');
-            renderState('intake'); 
-          }
-        } else if (profile.status === 'approved') {
-          document.getElementById('intake-cancel-btn').classList.remove('hidden');
-          document.getElementById('intake-disconnect-btn').classList.add('hidden');
+          else renderState('intake'); 
           
+        } else if (profile.status === 'approved') {
           document.getElementById('welcome-msg').textContent = `USR:${(profile.full_name || profile.email || 'UNKNOWN').toUpperCase()}`;
           loadDashboard(); renderState('dashboard');
         } else {
@@ -585,13 +577,9 @@
       if (error) {
         alert("Transmission failed: " + error.message);
       } else {
-        alert("Proposal transmitted for Advisor review.");
-        if (currentProfile.status === 'approved') {
-          loadDashboard(); renderState('dashboard'); // Route back to dashboard
-        } else {
-          checkSession(); // Route to waiting room for new users
-        }
+        checkSession(); 
       }
+    }
 
     // --- 6. DASHBOARD LOGIC ---
     async function loadDashboard() {
