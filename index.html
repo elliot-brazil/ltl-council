@@ -488,8 +488,20 @@
         } else { rosterContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; font-family: monospace;">[ ROSTER EMPTY ]</p>'; }
 
         // Render Resources
+        const isChairOrAdmin = currentProfile.role === 'admin' || currentProfile.id === node.profile_id;
+        const isApprovedMember = myRequest && myRequest.status === 'approved';
+        const hasResourceAccess = isChairOrAdmin || isApprovedMember;
+
         const resourceContainer = document.getElementById('node-resources');
-        if (resources && resources.length > 0) {
+        
+        if (!hasResourceAccess) {
+          // Block non-members with the new messaging
+          resourceContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; font-family: monospace;">[ RESOURCES HIDDEN UNTIL NODE JOINED ]</p>';
+        } else if (resourceError) {
+          // Handle legitimate DB errors for members
+          resourceContainer.innerHTML = `<p style="color: var(--accent-red); font-size: 0.85rem; font-family: monospace;">[ DB ERROR: ${resourceError.message} ]</p>`;
+        } else if (resources && resources.length > 0) {
+          // Render resources for authorized members
           resourceContainer.innerHTML = resources.map(res => {
             const hrefAttr = res.resource_url === '#' ? 'javascript:void(0)' : res.resource_url;
             const targetAttr = res.resource_url === '#' ? '' : 'target="_blank"';
@@ -500,7 +512,12 @@
               <a href="${esc(hrefAttr)}" ${targetAttr} style="color: var(--accent-cyan); text-decoration: none; font-family: 'Space Grotesk', sans-serif; font-size: 0.95rem; text-transform: uppercase; font-weight: 600; ${cursorStyle}">> ${esc(res.title)}</a>
             </div>`;
           }).join('');
-        } else { resourceContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; font-family: monospace;">[ SANDBOX EMPTY ]</p>'; }
+        } else { 
+
+          resourceContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; font-family: monospace;">[ SANDBOX EMPTY ]</p>'; 
+        }
+        
+        const adminPanel = document.getElementById('chair-admin-panel');
         
         // 5. Fetch Pending Requests (Admin or Chair Only)
         const isChairOrAdmin = currentProfile.role === 'admin' || currentProfile.id === node.profile_id;
