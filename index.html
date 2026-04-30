@@ -494,16 +494,27 @@
         } else if (roster && roster.length > 0) {
           rosterContainer.innerHTML = roster.map(r => {
             if (!r.profiles) return '';
+            
+            // 1. Check if this person is the current lead
+            const isCurrentLead = r.profile_id === node.profile_id;
             const isAdmin = currentProfile.role === 'admin';
-            const assignBtn = isAdmin ? `<button onclick="assignLead('${committeeId}', '${r.profile_id}')" style="padding: 2px 8px; font-size: 0.65rem; width: auto; margin-left: 12px; border-color: var(--accent-purple); color: #b07cff;">MAKE LEAD</button>` : '';
+            
+            // 2. Render either the Node Lead badge or the Make Lead button
+            let leadIndicator = '';
+            if (isCurrentLead) {
+              leadIndicator = `<span class="badge active" style="margin-left: 12px; border-color: var(--accent-cyan); color: var(--accent-cyan);">NODE LEAD</span>`;
+            } else if (isAdmin) {
+              leadIndicator = `<button onclick="assignLead('${committeeId}', '${r.profile_id}')" style="padding: 2px 8px; font-size: 0.65rem; width: auto; margin-left: 12px; background: rgba(112, 0, 255, 0.1); border-color: var(--accent-purple); color: #b07cff;">MAKE LEAD</button>`;
+            }
+
             return `
             <div style="padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-              <div style="display: flex; align-items: center;"><span style="font-family: 'Inter', sans-serif;">${esc(r.profiles.full_name)}</span>${assignBtn}</div>
-              <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--accent-purple); text-transform: uppercase;">${esc(r.profiles.role)}</span>
+              <div style="display: flex; align-items: center;"><span style="font-family: 'Inter', sans-serif;">${esc(r.profiles.full_name)}</span>${leadIndicator}</div>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">[ ${esc(r.profiles.role)} ]</span>
             </div>`;
           }).join('');
         } else { rosterContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; font-family: monospace;">[ ROSTER EMPTY ]</p>'; }
-
+        
         // Render Resources
         const isChairOrAdmin = currentProfile.role === 'admin' || currentProfile.id === node.profile_id;
         const isApprovedMember = myRequest && myRequest.status === 'approved';
