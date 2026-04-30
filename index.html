@@ -492,6 +492,14 @@
         if (rosterError) {
           rosterContainer.innerHTML = `<p style="color: var(--accent-red); font-size: 0.85rem; font-family: monospace;">[ DB ERROR: ${rosterError.message} ]</p>`;
         } else if (roster && roster.length > 0) {
+          
+          // Sort the roster: Lead at the top, then alphabetically by name
+          roster.sort((a, b) => {
+            if (a.profile_id === node.profile_id) return -1;
+            if (b.profile_id === node.profile_id) return 1;
+            return (a.profiles?.full_name || '').localeCompare(b.profiles?.full_name || '');
+          });
+
           rosterContainer.innerHTML = roster.map(r => {
             if (!r.profiles) return '';
             
@@ -514,7 +522,7 @@
             </div>`;
           }).join('');
         } else { rosterContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; font-family: monospace;">[ ROSTER EMPTY ]</p>'; }
-        
+       
         // Render Resources
         const isChairOrAdmin = currentProfile.role === 'admin' || currentProfile.id === node.profile_id;
         const isApprovedMember = myRequest && myRequest.status === 'approved';
