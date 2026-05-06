@@ -717,55 +717,43 @@
 
     async function loadDirectory() {
       const container = document.getElementById('registry-grid');
-      const dirState = document.getElementById('state-directory');
       
-      console.log("1. loadDirectory triggered. Container found:", !!container);
-
       try {
-        // Force the parent container to be highly visible
-        dirState.classList.remove('hidden');
-        dirState.style.display = 'block';
-        dirState.style.border = '5px solid red';
-        dirState.style.minHeight = '500px';
-        dirState.style.backgroundColor = '#222';
+        container.innerHTML = '<div class="loader" style="grid-column: 1 / -1;">[ QUERYING.REGISTRY... ]</div>';
         
-        container.innerHTML = '<h2 style="color: yellow;">[ QUERYING DATABASE... ]</h2>';
-        
-        console.log("2. Fetching from Supabase...");
         const { data, error } = await supabaseClient
           .from('profiles')
           .select('*')
           .eq('status', 'approved')
           .order('full_name', { ascending: true });
 
-        console.log("3. Data received:", data);
-
         if (error) throw error;
 
         if (!data || data.length === 0) {
-          container.innerHTML = '<h2 style="color: orange;">[ REGISTRY EMPTY ]</h2>';
+          container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; font-family: monospace; grid-column: 1 / -1;">[ REGISTRY EMPTY ]</p>';
           return;
         }
 
-        console.log("4. Mapping HTML...");
-        const html = data.map(p => {
+        container.innerHTML = data.map(p => {
           const displayName = p.full_name || p.email || 'UNKNOWN';
+          const displayRole = p.role || 'STAKEHOLDER';
           const displayEmail = p.email || 'NO_EMAIL';
           
           return `
-          <div style="padding: 20px; background: #000; border: 2px solid #00f0ff; margin-bottom: 10px;">
-            <h3 style="color: white; margin: 0; font-size: 20px;">${displayName}</h3>
-            <p style="color: #00f0ff; margin: 0;">${displayEmail}</p>
+          <div style="padding: 1.5rem; background: rgba(0,0,0,0.4); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); transition: border-color 0.2s ease;" onmouseover="this.style.borderColor='var(--accent-purple)'" onmouseout="this.style.borderColor='var(--border-glass)'">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+              <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; color: #fff; font-size: 1.1rem; text-transform: uppercase;">${esc(displayName)}</span>
+              <span class="badge" style="background: rgba(112, 0, 255, 0.1); color: #b07cff; border-color: var(--accent-purple); text-transform: uppercase;">${esc(displayRole)}</span>
+            </div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;">
+              <a href="mailto:${esc(displayEmail)}" style="color: var(--accent-cyan); text-decoration: none;">> ${esc(displayEmail)}</a>
+            </div>
           </div>`;
         }).join('');
 
-        console.log("5. Injecting HTML to screen...");
-        container.innerHTML = html;
-        console.log("6. Injection complete.");
-
       } catch (err) {
         console.error("Registry Load Error:", err);
-        container.innerHTML = `<h2 style="color: red;">[ ERROR: ${err.message} ]</h2>`;
+        container.innerHTML = `<p style="color: var(--accent-red); font-family: 'JetBrains Mono', monospace; grid-column: 1 / -1;">[ DB ERROR: ${err.message} ]</p>`;
       }
     }
 
