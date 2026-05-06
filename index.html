@@ -14,10 +14,162 @@
   
   <link rel="stylesheet" href="styles.css">
   <script src="app.js" defer></script> 
-  </head>
+</head>
 <body>
 
   <div id="loader" class="loader container">[ SYSTEM.INITIALIZING ]</div>
 
-  </body>
+  <div id="state-login" class="container hidden">
+    <div class="glass-panel" style="text-align: center; max-width: 450px; margin: 10vh auto;">
+      <h2 style="margin-bottom: 0.5rem;">LTL AI Council</h2>
+      <p style="color: var(--text-muted); margin-bottom: 2rem; font-size: 0.9rem;">Authorized personnel only. Request a transmission link to access the network.</p>
+      <form id="login-form">
+        <input type="email" id="email" placeholder="ENTER.EMAIL_ADDRESS" required style="text-align: center; font-family: 'JetBrains Mono', monospace;">
+        <button type="submit" id="auth-btn">Request Access Link</button>
+      </form>
+      <p id="login-msg" class="terminal-text" style="margin-top: 1.5rem; min-height: 20px;"></p>
+    </div>
+  </div>
+
+  <div id="state-pledge" class="container hidden">
+    <div class="glass-panel">
+      <h2>Council Registration</h2>
+      <p style="color: var(--text-muted); margin-bottom: 2rem;">Identity confirmed: <span id="pledge-email" class="terminal-text" style="color: #fff;"></span>. Finalize parameters below.</p>
+      
+      <form id="pledge-form">
+        <label>Full Name</label>
+        <input type="text" id="fullName" required placeholder="First Last">
+
+        <div id="legal-container">
+          <label>LTL AI Adoption Council Pledge</label>
+          <div id="legal-text" style="padding: 1.5rem; background: rgba(0,0,0,0.5); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 1.5rem;">
+            <p style="margin-top: 0;">As a member of the LTL AI Adoption Council, I commit to upholding the highest standards of professional conduct, acting with integrity, respect, and accountability in all interactions.</p>
+            <p>I will engage without overt sales intent, contributing knowledge and insights for the collective benefit of the group rather than personal gain.</p>
+            <p>I will actively participate with a collaborative spirit, sharing ideas openly while safeguarding all proprietary and confidential information entrusted to me or my organization.</p>
+            <p>I will respect diverse perspectives and encourage thoughtful, constructive debate, recognizing that progress is strengthened through informed and respectful exchange.</p>
+            <p style="margin-bottom: 0;">Through these commitments, I aim to support responsible AI adoption and advance the LTL industry together.</p>
+          </div>
+
+          <label class="checkbox-label" style="background: transparent; border: none; padding: 0;">
+            <input type="checkbox" required>
+            I attest that I have read and agree to the terms of the Pledge.
+          </label>
+          <br>
+          <button type="submit" id="sign-btn">Sign & Execute Contract</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="state-dashboard" class="container hidden">
+    <div class="header-nav">
+      <div>
+        <h3 style="margin:0;">COUNCIL.DASHBOARD</h3>
+        <span id="welcome-msg" class="terminal-text"></span>
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <button class="secondary" style="width: auto; padding: 0.5rem 1rem;" onclick="openDirectory()">Registry</button>
+        <button class="secondary" style="width: auto; padding: 0.5rem 1rem; border-color: var(--accent-red); color: var(--accent-red);" onclick="signOut()">Disconnect</button>
+      </div>
+    </div>
+    
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.5rem;">
+      <h2 style="margin:0;">Active Nodes</h2>
+    </div>
+
+    <div id="committee-list" class="committee-grid">
+      </div>
+  </div>
+
+  <div id="state-node" class="container hidden">
+    <div class="header-nav">
+      <div>
+        <h3 style="margin:0;">NODE.WORKSPACE</h3>
+        <span class="terminal-text">SECURE CONNECTION ESTABLISHED</span>
+      </div>
+      <button class="secondary" style="width: auto; padding: 0.5rem 1rem;" onclick="loadDashboard(); renderState('dashboard');">Return to Network</button>
+    </div>
+
+    <div class="glass-panel" style="padding: 2rem;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+        <div>
+          <h2 id="node-title" style="margin-bottom: 0.5rem; font-size: 2rem; color: #fff;"></h2>
+          <span id="node-focus" class="badge purple"></span>
+        </div>
+        <div id="node-action-container">
+          </div>
+      </div>
+      <p id="node-abstract" style="color: var(--text-muted); line-height: 1.6; font-size: 0.95rem; margin-bottom: 2rem; border-left: 2px solid var(--accent-cyan); padding-left: 1rem;"></p>
+
+      <div class="committee-grid">
+        <div>
+          <h4 style="margin-bottom: 1rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem; color: var(--accent-cyan); font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;">[ ACTIVE ROSTER ]</h4>
+          <div id="node-roster">
+            <div class="loader" style="height: 50px; font-size: 0.8rem;">[ FETCHING ]</div>
+          </div>
+        </div>
+
+        <div>
+          <h4 style="margin-bottom: 1rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem; color: var(--accent-purple); font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;">[ SANDBOX / RESOURCES ]</h4>
+          <div id="node-resources">
+            <div class="loader" style="height: 50px; font-size: 0.8rem;">[ FETCHING ]</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div id="chair-admin-panel" class="glass-panel hidden" style="border-color: var(--accent-purple); background: rgba(112, 0, 255, 0.05);">
+      <h3 style="color: #b07cff; margin-bottom: 1.5rem; font-size: 1.2rem;">Chair Administrative Controls</h3>
+      
+      <h4 style="margin-bottom: 1rem; border-bottom: 1px solid rgba(112,0,255,0.3); padding-bottom: 0.5rem; color: var(--text-primary); font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;">[ POST NEW RESOURCE ]</h4>
+      <form id="add-resource-form" onsubmit="submitResource(event)" style="margin-bottom: 2.5rem;">
+        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+          <input type="text" id="resource-title" required placeholder="Display Name (e.g., Node Charter)" style="margin-bottom: 0; flex: 2; border-color: rgba(112,0,255,0.3);">
+          <select id="resource-type" required style="margin-bottom: 0; flex: 1; border-color: rgba(112,0,255,0.3);">
+            <option value="DOC">DOC</option>
+            <option value="LINK">LINK</option>
+            <option value="SHEET">SHEET</option>
+            <option value="VIDEO">VIDEO</option>
+          </select>
+        </div>
+        <input type="url" id="resource-url" required placeholder="https://..." style="margin-bottom: 10px; border-color: rgba(112,0,255,0.3);">
+        <button type="submit" id="resource-submit-btn" style="padding: 0.6rem; font-size: 0.8rem; width: auto; background: rgba(112,0,255,0.1); color: #b07cff; border: 1px solid var(--accent-purple);">TRANSMIT TO SANDBOX</button>
+      </form>
+
+      <h4 style="margin-bottom: 1rem; border-bottom: 1px solid rgba(112,0,255,0.3); padding-bottom: 0.5rem; color: var(--text-primary); font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;">[ PENDING ACCESS REQUESTS ]</h4>
+      <div id="node-pending-requests">
+        </div>
+    </div>
+  </div>
+
+  <div id="state-directory" class="container hidden">
+    <div class="header-nav">
+      <div>
+        <h3 style="margin:0;">NETWORK.REGISTRY</h3>
+        <span class="terminal-text">AUTHORIZED PERSONNEL</span>
+      </div>
+      <button class="secondary" style="width: auto; padding: 0.5rem 1rem;" onclick="loadDashboard(); renderState('dashboard');">Return to Network</button>
+    </div>
+    <div class="glass-panel">
+      <div id="registry-grid" class="committee-grid">
+        </div>
+    </div>
+  </div>
+
+  <div id="request-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 100; display: flex; justify-content: center; align-items: center;">
+    <div class="glass-panel" style="width: 90%; max-width: 400px; padding: 2rem; position: relative;">
+      <h3 style="margin-bottom: 1rem;">Request Access</h3>
+      <p style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--accent-cyan); margin-bottom: 1.5rem;">TARGET: <span id="modal-node-name"></span></p>
+      <form id="request-form">
+        <label>Transmission Message (Optional)</label>
+        <textarea id="request-message" rows="3" placeholder="Briefly state your relevance to this node..."></textarea>
+        <div style="display: flex; gap: 10px; margin-top: 1rem;">
+          <button type="button" class="secondary" onclick="closeRequestModal()">Cancel</button>
+          <button type="submit" id="modal-submit-btn">Transmit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</body>
 </html>
