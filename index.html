@@ -701,73 +701,18 @@
       }
     }
 
-    function openDirectory() {
-      renderState('directory');
-      loadDirectory();
-    }
-
-   async function loadDirectory() {
-      const container = document.getElementById('registry-grid');
+   async function openDirectory() {
+      console.log("[NAV] Registry Button Clicked");
       
-      try {
-        console.log("[DIAGNOSTIC] 1. loadDirectory triggered");
-        container.innerHTML = '<div style="padding: 20px; background: #333; color: yellow;">[ DIAGNOSTIC LOADER INJECTED - WAITING FOR DATABASE... ]</div>';
-        
-        console.log("[DIAGNOSTIC] 2. Firing Supabase query...");
-        const { data, error } = await supabaseClient
-          .from('profiles')
-          .select('*')
-          .eq('status', 'approved');
-          
-        console.log("[DIAGNOSTIC] 3. Supabase query returned.");
-        console.log("[DIAGNOSTIC] Error Object:", error);
-        console.log("[DIAGNOSTIC] Data Array:", data);
+      // 1. Force the UI to show the Directory state explicitly
+      ['loader', 'state-login', 'state-pledge', 'state-dashboard', 'state-node', 'state-directory'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+      });
+      document.getElementById('state-directory').classList.remove('hidden');
 
-        if (error) {
-          throw new Error("Supabase API Error: " + error.message);
-        }
-
-        if (!data) {
-          throw new Error("Data array is completely null/undefined.");
-        }
-
-        if (data.length === 0) {
-          console.log("[DIAGNOSTIC] 4. Data length is 0. Showing empty state.");
-          container.innerHTML = '<p style="color: orange; font-size: 1rem; font-family: monospace; grid-column: 1 / -1;">[ THE DB RETURNED 0 ROWS MATCHING status=approved ]</p>';
-          return;
-        }
-
-        console.log(`[DIAGNOSTIC] 5. Found ${data.length} users. Attempting to render HTML...`);
-        
-        const htmlString = data.map(p => {
-          const displayName = p.full_name || p.email || 'UNKNOWN';
-          const displayRole = p.role || 'STAKEHOLDER';
-          return `
-          <div style="padding: 1.5rem; background: rgba(0,0,0,0.4); border: 1px solid var(--border-glass); border-radius: var(--radius-sm);">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-              <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; color: #fff; font-size: 1.1rem;">${esc(displayName)}</span>
-              <span class="badge" style="background: rgba(112, 0, 255, 0.1); color: #b07cff; border-color: var(--accent-purple);">${esc(displayRole)}</span>
-            </div>
-            <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--accent-cyan);">
-              > ${esc(p.email)}
-            </div>
-          </div>`;
-        }).join('');
-
-        console.log("[DIAGNOSTIC] 6. HTML string generated successfully. Injecting to DOM.");
-        container.innerHTML = htmlString;
-        console.log("[DIAGNOSTIC] 7. Render complete.");
-
-      } catch (err) {
-        console.error("[DIAGNOSTIC FATAL CRASH]:", err);
-        container.innerHTML = `
-          <div style="padding: 2rem; background: rgba(255,0,0,0.2); border: 2px solid red; border-radius: 8px; grid-column: 1 / -1;">
-            <h3 style="color: white; margin-top: 0;">FATAL RENDER CRASH</h3>
-            <p style="color: #ffcccc; font-family: monospace;">${err.message}</p>
-            <p style="color: #ffcccc; font-family: monospace; font-size: 0.8rem;">Open browser console for full stack trace.</p>
-          </div>
-        `;
-      }
+      // 2. Fire the diagnostic loader we built
+      await loadDirectory();
     }
 
     async function submitResource(e) {
