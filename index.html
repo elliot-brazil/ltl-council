@@ -704,15 +704,57 @@
    async function openDirectory() {
       console.log("[NAV] Registry Button Clicked");
       
-      // 1. Force the UI to show the Directory state explicitly
+      // Force the UI to show the Directory state explicitly
       ['loader', 'state-login', 'state-pledge', 'state-dashboard', 'state-node', 'state-directory'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
       });
       document.getElementById('state-directory').classList.remove('hidden');
 
-      // 2. Fire the diagnostic loader we built
+      // Fire the loader
       await loadDirectory();
+    }
+
+    async function loadDirectory() {
+      const container = document.getElementById('registry-grid');
+      
+      try {
+        container.innerHTML = '<div class="loader" style="grid-column: 1 / -1;">[ QUERYING.REGISTRY... ]</div>';
+        
+        const { data, error } = await supabaseClient
+          .from('profiles')
+          .select('*')
+          .eq('status', 'approved')
+          .order('full_name', { ascending: true });
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+          container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; font-family: monospace; grid-column: 1 / -1;">[ REGISTRY EMPTY ]</p>';
+          return;
+        }
+
+        container.innerHTML = data.map(p => {
+          const displayName = p.full_name || p.email || 'UNKNOWN';
+          const displayRole = p.role || 'STAKEHOLDER';
+          const displayEmail = p.email || 'NO_EMAIL';
+          
+          return `
+          <div style="padding: 1.5rem; background: rgba(0,0,0,0.4); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); transition: border-color 0.2s ease;" onmouseover="this.style.borderColor='var(--accent-purple)'" onmouseout="this.style.borderColor='var(--border-glass)'">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+              <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; color: #fff; font-size: 1.1rem; text-transform: uppercase;">${esc(displayName)}</span>
+              <span class="badge" style="background: rgba(112, 0, 255, 0.1); color: #b07cff; border-color: var(--accent-purple); text-transform: uppercase;">${esc(displayRole)}</span>
+            </div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;">
+              <a href="mailto:${esc(displayEmail)}" style="color: var(--accent-cyan); text-decoration: none;">> ${esc(displayEmail)}</a>
+            </div>
+          </div>`;
+        }).join('');
+
+      } catch (err) {
+        console.error("Registry Load Error:", err);
+        container.innerHTML = `<p style="color: var(--accent-red); font-family: 'JetBrains Mono', monospace; grid-column: 1 / -1;">[ DB ERROR: ${err.message} ]</p>`;
+      }
     }
 
     async function submitResource(e) {
