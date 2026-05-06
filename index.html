@@ -710,10 +710,10 @@
       const container = document.getElementById('registry-grid');
       container.innerHTML = '<div class="loader" style="grid-column: 1 / -1;">[ QUERYING.REGISTRY... ]</div>';
 
+      // Streamlined query: Fetch anyone who is approved, regardless of role
       const { data, error } = await supabaseClient
         .from('profiles')
         .select('*')
-        .in('role', ['advisor', 'admin', 'stakeholder'])
         .eq('status', 'approved')
         .order('full_name', { ascending: true });
 
@@ -723,17 +723,24 @@
       }
 
       if (data && data.length > 0) {
-        container.innerHTML = data.map(p => `
+        container.innerHTML = data.map(p => {
+          // Fallback handlers to prevent silent crashes if a user profile is incomplete
+          const displayName = p.full_name || p.email || 'UNKNOWN IDENTITY';
+          const displayRole = p.role || 'STAKEHOLDER';
+          const displayEmail = p.email || 'NO_EMAIL_ON_FILE';
+          
+          return `
           <div style="padding: 1.5rem; background: rgba(0,0,0,0.4); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); transition: border-color 0.2s ease;" onmouseover="this.style.borderColor='var(--accent-purple)'" onmouseout="this.style.borderColor='var(--border-glass)'">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-              <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; color: #fff; font-size: 1.1rem; text-transform: uppercase;">${esc(p.full_name)}</span>
-              <span class="badge" style="background: rgba(112, 0, 255, 0.1); color: #b07cff; border-color: var(--accent-purple);">${esc(p.role)}</span>
+              <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; color: #fff; font-size: 1.1rem; text-transform: uppercase;">${esc(displayName)}</span>
+              <span class="badge" style="background: rgba(112, 0, 255, 0.1); color: #b07cff; border-color: var(--accent-purple); text-transform: uppercase;">${esc(displayRole)}</span>
             </div>
             <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;">
-              <a href="mailto:${esc(p.email)}" style="color: var(--accent-cyan); text-decoration: none;">> ${esc(p.email)}</a>
+              <a href="mailto:${esc(displayEmail)}" style="color: var(--accent-cyan); text-decoration: none;">> ${esc(displayEmail)}</a>
             </div>
           </div>
-        `).join('');
+        `;
+        }).join('');
       } else {
         container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; font-family: monospace; grid-column: 1 / -1;">[ REGISTRY EMPTY ]</p>';
       }
