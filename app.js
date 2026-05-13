@@ -93,25 +93,79 @@
     function showLoader() { renderState('loader'); }
 
     // --- 3. AUTHENTICATION ---
-    document.getElementById('login-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = document.getElementById('email').value;
-      const btn = document.getElementById('auth-btn');
-      const msg = document.getElementById('login-msg');
-      
-      btn.innerText = "TRANSMITTING..."; btn.disabled = true; msg.innerText = "";
-      
-      const { error } = await supabaseClient.auth.signInWithOtp({ 
-        email, options: { emailRedirectTo: window.location.origin } 
-      });
-      
-      if (error) {
-        msg.style.color = 'var(--accent-red)'; msg.innerText = `ERR: ${error.message}`;
-        btn.innerText = "Request Access Link"; btn.disabled = false;
-      } else {
-        msg.style.color = 'var(--accent-cyan)'; msg.innerText = "TRANSMISSION SENT. CHECK INBOX.";
-      }
-    });
+    // --- AUTHENTICATION FLOW ---
+let authEmail = "";
+
+// Step 1: Request the 8-Digit Code
+document.getElementById('request-code-btn').addEventListener('click', async () => {
+  const emailInput = document.getElementById('email').value;
+  const btn = document.getElementById('request-code-btn');
+  const msg = document.getElementById('login-msg');
+  
+  if (!emailInput) {
+    msg.innerText = "[ ERROR: EMAIL REQUIRED ]";
+    return;
+  }
+
+  authEmail = emailInput;
+  btn.innerText = "TRANSMITTING..."; 
+  btn.disabled = true; 
+  msg.innerText = "";
+  
+  const { error } = await supabaseClient.auth.signInWithOtp({ 
+    email: authEmail
+  });
+
+  btn.innerText = "Request Access Code"; 
+  btn.disabled = false;
+
+  if (error) {
+    msg.innerText = `[ DB ERROR: ${error.message} ]`;
+  } else {
+    document.getElementById('email-step').classList.add('hidden');
+    document.getElementById('otp-step').classList.remove('hidden');
+    document.getElementById('otp-code').focus();
+  }
+});
+
+// Step 2: Verify the 8-Digit Code
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault(); 
+  const code = document.getElementById('otp-code').value;
+  const btn = document.getElementById('verify-btn');
+  const msg = document.getElementById('login-msg');
+
+  if (!code || code.length !== 8) {
+    msg.innerText = "[ ERROR: 8-DIGIT CODE REQUIRED ]";
+    return;
+  }
+
+  btn.innerText = "VERIFYING..."; 
+  btn.disabled = true; 
+  msg.innerText = "";
+
+  const { data, error } = await supabaseClient.auth.verifyOtp({
+    email: authEmail,
+    token: code,
+    type: 'email'
+  });
+
+  btn.innerText = "Verify & Connect"; 
+  btn.disabled = false;
+
+  if (error) {
+    msg.innerText = `[ AUTH FAILED: ${error.message} ]`;
+  } 
+  // Global onAuthStateChange handles routing upon success
+});
+
+// Step 3: Cancel and return to email input
+document.getElementById('back-to-email-btn').addEventListener('click', () => {
+  document.getElementById('otp-step').classList.add('hidden');
+  document.getElementById('email-step').classList.remove('hidden');
+  document.getElementById('login-msg').innerText = "";
+  document.getElementById('otp-code').value = "";
+});
 
     async function signOut() { 
       try { await supabaseClient.auth.signOut(); } 
