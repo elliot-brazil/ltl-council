@@ -167,6 +167,26 @@ document.getElementById('back-to-email-btn').addEventListener('click', () => {
   document.getElementById('login-msg').innerText = "";
   document.getElementById('otp-code').value = "";
 });
+
+  async function signOut() {
+      // 1. Scrub the forms clean
+      document.getElementById('email').value = "";
+      document.getElementById('otp-code').value = "";
+      document.getElementById('login-msg').innerText = "";
+      authEmail = "";
+
+      // 2. Reset the UI back to Step 1
+      document.getElementById('otp-form').classList.add('hidden');
+      document.getElementById('email-form').classList.remove('hidden');
+
+      // 3. Sever the database connection
+      await supabaseClient.auth.signOut();
+      
+      // Note: We don't need to call renderState('login') here because your 
+      // onAuthStateChange listener at the top of the file will detect the 
+      // 'SIGNED_OUT' event and automatically route them to the login screen!
+    }
+
     // --- 4. ONBOARDING (PLEDGE) LOGIC ---
     document.getElementById('pledge-form').addEventListener('submit', handlePledgeSubmit);
     document.getElementById('request-form').addEventListener('submit', submitAttachmentRequest);
