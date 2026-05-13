@@ -22,11 +22,22 @@
   <div id="state-login" class="container hidden">
     <div class="glass-panel" style="text-align: center; max-width: 450px; margin: 10vh auto;">
       <h2 style="margin-bottom: 0.5rem;">LTL AI Council</h2>
-      <p style="color: var(--text-muted); margin-bottom: 2rem; font-size: 0.9rem;">Authorized personnel only. Request a transmission link to access the network.</p>
+      <p style="color: var(--text-muted); margin-bottom: 2rem; font-size: 0.9rem;">Authorized personnel only. Request a transmission code to access the network.</p>
+      
       <form id="login-form">
-        <input type="email" id="email" placeholder="ENTER.EMAIL_ADDRESS" required style="text-align: center; font-family: 'JetBrains Mono', monospace;">
-        <button type="submit" id="auth-btn">Request Access Link</button>
+        <div id="email-step">
+          <input type="email" id="email" placeholder="ENTER.EMAIL_ADDRESS" required style="text-align: center; font-family: 'JetBrains Mono', monospace;">
+          <button type="button" id="request-code-btn">Request Access Code</button>
+        </div>
+        
+        <div id="otp-step" class="hidden">
+          <p style="color: var(--accent-cyan); font-size: 0.85rem; margin-bottom: 1rem;">Transmission sent. Enter your 8-digit code.</p>
+          <input type="text" id="otp-code" placeholder="00000000" pattern="\d*" maxlength="8" style="text-align: center; font-size: 1.5rem; letter-spacing: 5px; font-family: 'JetBrains Mono', monospace;">
+          <button type="submit" id="verify-btn">Verify & Connect</button>
+          <button type="button" class="secondary" id="back-to-email-btn" style="margin-top: 10px; padding: 0.5rem;">Cancel</button>
+        </div>
       </form>
+      
       <p id="login-msg" class="terminal-text" style="margin-top: 1.5rem; min-height: 20px;"></p>
     </div>
   </div>
