@@ -92,12 +92,13 @@
 
     function showLoader() { renderState('loader'); }
 
-    // --- 3. AUTHENTICATION ---
-    // --- AUTHENTICATION FLOW ---
+ // --- 3. AUTHENTICATION FLOW ---
 let authEmail = "";
 
-// Step 1: Request the 8-Digit Code
-document.getElementById('request-code-btn').addEventListener('click', async () => {
+// Step 1: Request the 8-Digit Code (Now a 'submit' event)
+document.getElementById('email-form').addEventListener('submit', async (e) => {
+  e.preventDefault(); // Stops the page from refreshing when you hit Enter
+  
   const emailInput = document.getElementById('email').value;
   const btn = document.getElementById('request-code-btn');
   const msg = document.getElementById('login-msg');
@@ -122,14 +123,14 @@ document.getElementById('request-code-btn').addEventListener('click', async () =
   if (error) {
     msg.innerText = `[ DB ERROR: ${error.message} ]`;
   } else {
-    document.getElementById('email-step').classList.add('hidden');
-    document.getElementById('otp-step').classList.remove('hidden');
+    document.getElementById('email-form').classList.add('hidden');
+    document.getElementById('otp-form').classList.remove('hidden');
     document.getElementById('otp-code').focus();
   }
 });
 
 // Step 2: Verify the 8-Digit Code
-document.getElementById('login-form').addEventListener('submit', async (e) => {
+document.getElementById('otp-form').addEventListener('submit', async (e) => {
   e.preventDefault(); 
   const code = document.getElementById('otp-code').value;
   const btn = document.getElementById('verify-btn');
@@ -161,17 +162,11 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
 
 // Step 3: Cancel and return to email input
 document.getElementById('back-to-email-btn').addEventListener('click', () => {
-  document.getElementById('otp-step').classList.add('hidden');
-  document.getElementById('email-step').classList.remove('hidden');
+  document.getElementById('otp-form').classList.add('hidden');
+  document.getElementById('email-form').classList.remove('hidden');
   document.getElementById('login-msg').innerText = "";
   document.getElementById('otp-code').value = "";
 });
-
-    async function signOut() { 
-      try { await supabaseClient.auth.signOut(); } 
-      catch (e) { console.error("Signout error", e); }
-    }
-
     // --- 4. ONBOARDING (PLEDGE) LOGIC ---
     document.getElementById('pledge-form').addEventListener('submit', handlePledgeSubmit);
     document.getElementById('request-form').addEventListener('submit', submitAttachmentRequest);
