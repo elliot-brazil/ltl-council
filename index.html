@@ -24,13 +24,15 @@
       <h2 style="margin-bottom: 0.5rem;">LTL AI Council</h2>
       <p style="color: var(--text-muted); margin-bottom: 2rem; font-size: 0.9rem;">Authorized personnel only. Request a transmission code to access the network.</p>
       
-      <form id="login-form">
+      <form id="email-form">
         <div id="email-step">
           <input type="email" id="email" placeholder="ENTER.EMAIL_ADDRESS" required style="text-align: center; font-family: 'JetBrains Mono', monospace;">
-          <button type="button" id="request-code-btn">Request Access Code</button>
+          <button type="submit" id="request-code-btn">Request Access Code</button>
         </div>
+      </form>
         
-        <div id="otp-step" class="hidden">
+      <form id="otp-form" class="hidden">
+        <div id="otp-step">
           <p style="color: var(--accent-cyan); font-size: 0.85rem; margin-bottom: 1rem;">Transmission sent. Enter your 8-digit code.</p>
           <input type="text" id="otp-code" placeholder="00000000" pattern="\d*" maxlength="8" style="text-align: center; font-size: 1.5rem; letter-spacing: 5px; font-family: 'JetBrains Mono', monospace;">
           <button type="submit" id="verify-btn">Verify & Connect</button>
